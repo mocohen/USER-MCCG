@@ -16,8 +16,7 @@ elif (test $1 = 0) then
 
 
 
-<<<<<<< HEAD
+
 fi
-=======
-fi
->>>>>>> origin/master
+
+
