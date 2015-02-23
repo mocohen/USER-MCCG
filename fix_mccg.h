@@ -34,6 +34,7 @@ class FixMCCG : public Fix {
   int get_CV_index(double cv1_val);
   int get_CV_index(double cv1_val, double cv2_val);
   void readRealMols(char * file);
+  double getEnergy(int molid);
 //  double compute_vector(int);
 //  double memory_usage();
 
@@ -58,7 +59,11 @@ class FixMCCG : public Fix {
   
   double * v11_list;
   double * v22_list;
-  double * v12_list;
+  double * v12_index;
+  
+  double * e_vector1;
+  double * e_vector2;
+  double * e_value;
   
   //char *xstr,*ystr,*zstr;
   //char *idregion;

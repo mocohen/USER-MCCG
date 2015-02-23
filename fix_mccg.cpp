@@ -68,87 +68,26 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   
   
   readCouplingTable(arg[3]);
+  printf("finished reading table\n");
   readRealMols(arg[6]);
-	/*
-  dynamic_group_allow = 1;
-  vector_flag = 1;
-  size_vector = 3;
-  global_freq = 1;
-  extvector = 1;
 
-  xstr = ystr = zstr = NULL;
-
-  if (strstr(arg[3],"v_") == arg[3]) {
-    int n = strlen(&arg[3][2]) + 1;
-    xstr = new char[n];
-    strcpy(xstr,&arg[3][2]);
-  } else if (strcmp(arg[3],"NULL") == 0) {
-    xstyle = NONE;
-  } else {
-    xvalue = force->numeric(FLERR,arg[3]);
-    xstyle = CONSTANT;
-  }
-  if (strstr(arg[4],"v_") == arg[4]) {
-    int n = strlen(&arg[4][2]) + 1;
-    ystr = new char[n];
-    strcpy(ystr,&arg[4][2]);
-  } else if (strcmp(arg[4],"NULL") == 0) {
-    ystyle = NONE;
-  } else {
-    yvalue = force->numeric(FLERR,arg[4]);
-    ystyle = CONSTANT;
-  }
-  if (strstr(arg[5],"v_") == arg[5]) {
-    int n = strlen(&arg[5][2]) + 1;
-    zstr = new char[n];
-    strcpy(zstr,&arg[5][2]);
-  } else if (strcmp(arg[5],"NULL") == 0) {
-    zstyle = NONE;
-  } else {
-    zvalue = force->numeric(FLERR,arg[5]);
-    zstyle = CONSTANT;
-  }
-
-  // optional args
-
-  iregion = -1;
-  idregion = NULL;
-
-  int iarg = 6;
-  while (iarg < narg) {
-    if (strcmp(arg[iarg],"region") == 0) {
-      if (iarg+2 > narg) error->all(FLERR,"Illegal fix setforce command");
-      iregion = domain->find_region(arg[iarg+1]);
-      if (iregion == -1)
-        error->all(FLERR,"Region ID for fix setforce does not exist");
-      int n = strlen(arg[iarg+1]) + 1;
-      idregion = new char[n];
-      strcpy(idregion,arg[iarg+1]);
-      iarg += 2;
-    } else error->all(FLERR,"Illegal fix setforce command");
-  }
-
-  force_flag = 0;
-  foriginal[0] = foriginal[1] = foriginal[2] = 0.0;
-
-  maxatom = atom->nmax;
-  memory->create(sforce,maxatom,3,"setforce:sforce");
-  */
 }
 
 /* ---------------------------------------------------------------------- */
 
 FixMCCG::~FixMCCG()
 {
-
   delete [] table_v12;
   delete [] table_f_cv1;
   delete [] table_f_cv2;
   delete [] real_mols;
   delete [] fake_mols;
   delete [] v11_list;
-  delete [] v12_list;
+  delete [] v12_index;
   delete [] v22_list; 
+  delete [] e_vector1;
+  delete [] e_vector2;
+  delete [] e_value;
   //delete [] xstr;
   //delete [] ystr;
   //delete [] zstr;
@@ -172,68 +111,10 @@ int FixMCCG::setmask()
 
 void FixMCCG::init()
 {
-  printf("init MCCG!\n num molecule %d \n", atom->nmolecule);
+  //printf("init MCCG!\n num molecule %d \n", atom->nmolecule);
   //First calculate number of molecules
 
-  // check variables
-/*
-  if (xstr) {
-    xvar = input->variable->find(xstr);
-    if (xvar < 0)
-      error->all(FLERR,"Variable name for fix setforce does not exist");
-    if (input->variable->equalstyle(xvar)) xstyle = EQUAL;
-    else if (input->variable->atomstyle(xvar)) xstyle = ATOM;
-    else error->all(FLERR,"Variable for fix setforce is invalid style");
-  }
-  if (ystr) {
-    yvar = input->variable->find(ystr);
-    if (yvar < 0)
-      error->all(FLERR,"Variable name for fix setforce does not exist");
-    if (input->variable->equalstyle(yvar)) ystyle = EQUAL;
-    else if (input->variable->atomstyle(yvar)) ystyle = ATOM;
-    else error->all(FLERR,"Variable for fix setforce is invalid style");
-  }
-  if (zstr) {
-    zvar = input->variable->find(zstr);
-    if (zvar < 0)
-      error->all(FLERR,"Variable name for fix setforce does not exist");
-    if (input->variable->equalstyle(zvar)) zstyle = EQUAL;
-    else if (input->variable->atomstyle(zvar)) zstyle = ATOM;
-    else error->all(FLERR,"Variable for fix setforce is invalid style");
-  }
 
-  // set index and check validity of region
-
-  if (iregion >= 0) {
-    iregion = domain->find_region(idregion);
-    if (iregion == -1)
-      error->all(FLERR,"Region ID for fix setforce does not exist");
-  }
-
-  if (xstyle == ATOM || ystyle == ATOM || zstyle == ATOM)
-    varflag = ATOM;
-  else if (xstyle == EQUAL || ystyle == EQUAL || zstyle == EQUAL)
-    varflag = EQUAL;
-  else varflag = CONSTANT;
-
-  if (strstr(update->integrate_style,"respa"))
-    nlevels_respa = ((Respa *) update->integrate)->nlevels;
-
-  // cannot use non-zero forces for a minimization since no energy is integrated
-  // use fix addforce instead
-
-  int flag = 0;
-  if (update->whichflag == 2) {
-    if (xstyle == EQUAL || xstyle == ATOM) flag = 1;
-    if (ystyle == EQUAL || ystyle == ATOM) flag = 1;
-    if (zstyle == EQUAL || zstyle == ATOM) flag = 1;
-    if (xstyle == CONSTANT && xvalue != 0.0) flag = 1;
-    if (ystyle == CONSTANT && yvalue != 0.0) flag = 1;
-    if (zstyle == CONSTANT && zvalue != 0.0) flag = 1;
-  }
-  if (flag)
-    error->all(FLERR,"Cannot use non-zero forces in an energy minimization");
-*/
 }
 
 /* ---------------------------------------------------------------------- */
@@ -244,12 +125,7 @@ void FixMCCG::setup(int vflag)
   // WHAT DO I NEED TO DO HERE!!!!
   if (strstr(update->integrate_style,"verlet"))
     post_force(vflag);
-/*  else
-    for (int ilevel = 0; ilevel < nlevels_respa; ilevel++) {
-      ((Respa *) update->integrate)->copy_flevel_f(ilevel);
-      post_force_respa(vflag,ilevel,0);
-      ((Respa *) update->integrate)->copy_f_flevel(ilevel);
-    }*/
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -301,84 +177,77 @@ void FixMCCG::post_force(int vflag)
   int nlocal = atom->nlocal;
   tagint *molecule = atom->molecule;
 
-  
-  printf("Num local %d\n", nlocal);
+  printf("Loop through mccg mols\n");
+  for (int i = 0; i < sizeof(real_mols)/sizeof(int)-1; i++)
+  {
+  		printf("interation %d through mccg mols\n", i);
+  		double v11, v22, v12, c1, c2, d1, d2, cv_val, discrim, norm_factor;
+  		int cv_index;
+  		v11 = getEnergy(i);
+  		v22 = getEnergy(i + 1);
+  		if (numCVs == 1)
+  		{
+  			cv_index = get_CV_index(1.0); 
+  		}
+  		if (numCVs == 2)
+  		{
+			cv_index = get_CV_index(1.0, 2.0);
+  		}
+  		
+  		
+  		
+  		v12 = table_v12[cv_index];
+  		
+  		// Calculate Eigenvector for 2x2 matrix for lower E'val
+  		discrim = pow(v11, 2) + 4*pow(v12, 2) - (2* v11*v22);
+  		d1 = v11 -v22 -sqrt(discrim);
+  		d2 = 1;
+  		norm_factor = sqrt(pow(d1,2) + pow(d2,2));
+  		c1 = d1 / norm_factor;
+  		c2 = d2 / norm_factor;
+  		
+  		v11_list[i] = v11;
+  		v12_index[i] = cv_index;
+  		v22_list[i] = v22;
+  		
+  		e_vector1[i] = c1;
+  		e_vector2[i] = c2;
+  		
+  		double discr = pow(v12,2) + pow((v11 - v22)/2, 2 );
+  		e_value[i] = 0.5 * (v11+v22) - sqrt(discr);
+  }
+  printf("Loop through atoms to change forces\n");
+  //calculate hellman-feyman forces for 2x2
   for (int i = 0; i < nlocal; i++)
   {
-  ;
-  	//printf("coords %f %f %f molind %d molatom %d", x[i][0], x[i][1], x[i][2], molindex[i], molatom[i]);
-    printf("index %d coords %f %f %f mask %d molecule %d\n", i, x[i][0], x[i][1], x[i][2], mask[i], molecule[i]);
-
-  }
+  	   printf("interation %d through atoms\n", i);
+  	   int molind = (molecule[i] - 1) / 2;
+  	   int v12_ind;
+  	   double v11, v22, c1, c2;
+  	   
+  	   v11 = v11_list[i];
+  	   v12_ind = v12_index[i];
+  	   v22 = v22_list[i];
+  	   
+  	   c1 = e_vector1[i];
+  	   c2 = e_vector2[i];
   
-  for (int i = 0; i < len(real_mols); i++)
-  {
-  		
-  }
-/*
-  // update region if necessary
-
-  Region *region = NULL;
-  if (iregion >= 0) {
-    region = domain->regions[iregion];
-    region->prematch();
-  }
-
-  // reallocate sforce array if necessary
-
-  if (varflag == ATOM && nlocal > maxatom) {
-    maxatom = atom->nmax;
-    memory->destroy(sforce);
-    memory->create(sforce,maxatom,3,"setforce:sforce");
+  	   for (int j = 0; j < 3; j++)
+  	   {
+  	   		printf("x y z\n");
+  	   		double term1, term2, term3;
+  	   		double dcvdq = 1.0;
+  	   		double dv12 = 1.0;
+  	   		
+  	   		term1 = pow(c1, 2)*f[i][j];
+  	   		term2 = pow(c2, 2)*f[i][j];
+  	   		term3 = 2*c1*c2*dcvdq*dv12; 
+  	   		f[i][j] = term1 + term2 + (2*term3);
+  	   
+  	   }
+  
   }
 
-  foriginal[0] = foriginal[1] = foriginal[2] = 0.0;
-  force_flag = 0;
-
-  if (varflag == CONSTANT) {
-    for (int i = 0; i < nlocal; i++)
-      if (mask[i] & groupbit) {
-        if (region && !region->match(x[i][0],x[i][1],x[i][2])) continue;
-        foriginal[0] += f[i][0];
-        foriginal[1] += f[i][1];
-        foriginal[2] += f[i][2];
-        if (xstyle) f[i][0] = xvalue;
-        if (ystyle) f[i][1] = yvalue;
-        if (zstyle) f[i][2] = zvalue;
-      }
-
-  // variable force, wrap with clear/add
-
-  } else {
-
-    modify->clearstep_compute();
-
-    if (xstyle == EQUAL) xvalue = input->variable->compute_equal(xvar);
-    else if (xstyle == ATOM)
-      input->variable->compute_atom(xvar,igroup,&sforce[0][0],3,0);
-    if (ystyle == EQUAL) yvalue = input->variable->compute_equal(yvar);
-    else if (ystyle == ATOM)
-      input->variable->compute_atom(yvar,igroup,&sforce[0][1],3,0);
-    if (zstyle == EQUAL) zvalue = input->variable->compute_equal(zvar);
-    else if (zstyle == ATOM)
-      input->variable->compute_atom(zvar,igroup,&sforce[0][2],3,0);
-
-    modify->addstep_compute(update->ntimestep + 1);
-
-    for (int i = 0; i < nlocal; i++)
-      if (mask[i] & groupbit) {
-        if (region && !region->match(x[i][0],x[i][1],x[i][2])) continue;
-        foriginal[0] += f[i][0];
-        foriginal[1] += f[i][1];
-        foriginal[2] += f[i][2];
-        if (xstyle == ATOM) f[i][0] = sforce[i][0];
-        else if (xstyle) f[i][0] = xvalue;
-        if (ystyle == ATOM) f[i][1] = sforce[i][1];
-        else if (ystyle) f[i][1] = yvalue;
-        if (zstyle == ATOM) f[i][2] = sforce[i][2];
-        else if (zstyle) f[i][2] = zvalue;
-      }
-  }*/
 }
 
 int FixMCCG::get_CV_index(double cv1_val)
@@ -396,27 +265,46 @@ int FixMCCG::get_CV_index(double cv1_val, double cv2_val)
 
 }
 
+double FixMCCG::getEnergy(int molid)
+{
+	return rand() % 10;
+}
+
 void FixMCCG::readRealMols(char * file)
 {
+	printf("Begin read mols\n");
 	char line[MAXLINE];
-	FILE * fp;
-	fp = fopen(file, "r");
-	fgets(line,MAXLINE,fp); // comment
-	fgets(line,MAXLINE,fp);
+	FILE * fnp;
+	fnp = fopen(file, "r");
+	fgets(line,MAXLINE,fnp); // comment
+	fgets(line,MAXLINE,fnp);
 	int numMols;
 	sscanf(line,"NUM %i",&numMols);
+	printf("\nNum MOls %d\n", numMols);
 	
-	memory->create(real_mols,   numMols / 2, "mccg:real_mols");
-	memory->create(fake_mols,   numMols / 2, "mccg:fake_mols");
-	memory->create(v11_list,   numMols / 2, "mccg:v11_list");
-	memory->create(v22_list,   numMols / 2, "mccg:v22_list");
-	memory->create(v12_list,   numMols / 2, "mccg:v12_list");
+	//int numMols = 1;
+	memory->create(real_mols,   numMols, "mccg:real_mols");
+	memory->create(fake_mols,   numMols, "mccg:fake_mols");
+	memory->create(v11_list,   	numMols, "mccg:v11_list");
+	memory->create(v22_list,   	numMols, "mccg:v22_list");
+	memory->create(v12_index,   numMols, "mccg:v12_list");
+	memory->create(e_vector1, 	numMols, "mccg:e_vector1");
+	memory->create(e_vector2, 	numMols, "mccg:e_vector2");
+	memory->create(e_value, 	numMols, "mccg:e_value");
+	
+	printf("Done allocating\n");
 
-    for(int i=0; i<table_num_points; i++) 
+    for(int i=0; i<numMols; i++) 
     {
-     	fgets(line,MAXLINE,fp);
-    	sscanf(line,"%i %i %i", &real_mols[i], &fake_mols[i], &num_mccg_atoms);
+    	printf("loop");
+     	fgets(line,MAXLINE,fnp);
+     	//fake_mols[i] = 2;
+     	//real_mols[i] = 1;
+     	//num_mccg_atoms = 1;
+     	//int mccg_atoms;
+    	sscanf(line,"%d %d %d", &real_mols[i], &fake_mols[i], &num_mccg_atoms);
     }
+    printf("done read\n");
 
 
 }
@@ -424,26 +312,7 @@ void FixMCCG::readRealMols(char * file)
 void FixMCCG::readCouplingTable(char * file)
 {
 	printf("read %s\n", file);
-	/*std::ifstream inf(file);
-	
-	if (!inf)
-	{
-		error->all(FLERR,"Coupling file cannot be opened for reading!");
-	}
-	while(inf)
-	{
-		std::string strInput;		
-		getline(inf, strInput);
-		std::cout << strInput << std::endl;
-		
-		
-		if (strstr(strInput,"NCV") == strInput) 
-		{
-			std::cout << "NCV" << std::endl;
-		}
-	
-	}*/
-	
+
 	
 	char line[MAXLINE];
 	FILE * fp;
@@ -451,15 +320,15 @@ void FixMCCG::readCouplingTable(char * file)
 	fgets(line,MAXLINE,fp); // comment
 	fgets(line,MAXLINE,fp); // Blank line
 	
-	
 	int num_q;
 	fgets(line,MAXLINE,fp);
 	sscanf(line,"N %i NCV %i",&table_num_points,&num_q);
 	//printf("NumCVs %d num_q %d", numCVs, num_q);
 	if(numCVs != num_q) error->one(FLERR,"Inconsistent number of CVs.");
-	
+	printf("numCVs %d \n", numCVs);
 	if (numCVs == 1)
 	{
+		printf("cv1 \n");
 		int indx;
     	fgets(line,MAXLINE,fp);
     	sscanf(line,"CV %i min %lg max %lg bins %i",&indx,&cv1_min,&cv1_max,&cv1_num_points);
@@ -482,6 +351,7 @@ void FixMCCG::readCouplingTable(char * file)
     	cv1_delta = (cv1_max - cv1_min) / double(cv1_num_points - 1);
 	}
 	else if(numCVs == 2){
+		printf("cv2 \n");
 	    int indx;
     	fgets(line,MAXLINE,fp);
     	sscanf(line,"CV %i min %lg max %lg bins %i",&indx,&cv1_min,&cv1_max,&cv1_num_points);
@@ -511,6 +381,7 @@ void FixMCCG::readCouplingTable(char * file)
 	}
 	
 	//while (())
+	printf("done reading coupling table\n");
 
 }
 
