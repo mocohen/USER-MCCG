@@ -29,6 +29,11 @@ class FixMCCG : public Fix {
   void setup(int);
   void min_setup(int);
   void post_force(int);
+  void post_integrate();
+  void readCouplingTable(char * file);
+  int get_CV_index(double cv1_val);
+  int get_CV_index(double cv1_val, double cv2_val);
+  void readRealMols(char * file);
 //  double compute_vector(int);
 //  double memory_usage();
 
@@ -36,6 +41,25 @@ class FixMCCG : public Fix {
   //double xvalue,yvalue,zvalue;
   int varflag,iregion;
   int numMolecules;
+  int numCVs;
+  int table_num_points, cv1_num_points, cv2_num_points;
+  double cv1_min, cv1_max, cv1_delta;
+  double cv2_min, cv2_max, cv2_delta;
+  
+  int num_mccg_atoms;
+  
+  
+  double * table_v12;     // Table of coupling
+  double * table_f_cv1;   // Table of force from first CV
+  double * table_f_cv2;   // Table of force from second CV
+  
+  int * real_mols;
+  int * fake_mols;
+  
+  double * v11_list;
+  double * v22_list;
+  double * v12_list;
+  
   //char *xstr,*ystr,*zstr;
   //char *idregion;
   //int xvar,yvar,zvar,xstyle,ystyle,zstyle;

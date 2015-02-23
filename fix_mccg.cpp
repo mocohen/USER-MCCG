@@ -5,7 +5,11 @@ http://vothgroup.uchicago.edu
 Morris Cohen (C) 2015
 mocohen@uchicago.edu
 
+
+NOTE: YOU CURRENTLY CANNOT HAVE ATOMS OF SAME TYPE ON SAME MOLECULE
 ------------------------------------------------------------------------- */
+#include <fstream>
+#include <iostream>
 
 #include "string.h"
 #include "stdlib.h"
@@ -26,6 +30,8 @@ using namespace FixConst;
 
 enum{NONE,CONSTANT,EQUAL,ATOM};
 
+#define MAXLINE 1024
+
 /*
 Order of Methods being called:
 Before MD Begins:
@@ -44,8 +50,26 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   Fix(lmp, narg, arg)
 {
   printf("Hello world MCCG");
-  /*if (narg < 6) error->all(FLERR,"Illegal fix setforce command");
+  if (narg < 7) error->all(FLERR,"Illegal fix mccg command");
+  
 
+  if (strstr(arg[4], "ncvs") == arg[4])
+  {
+  		int i;
+  		sscanf(arg[5], "%d", &numCVs);
+  		printf("%d", i);
+  		//numCVs = *(int *)arg[5];
+  		printf("NumCVs %d \n", numCVs);
+  		std::cout << numCVs << std::endl;
+  }
+  else error->all(FLERR,"Illegal fix mccg command");
+  
+  
+  
+  
+  readCouplingTable(arg[3]);
+  readRealMols(arg[6]);
+	/*
   dynamic_group_allow = 1;
   vector_flag = 1;
   size_vector = 3;
@@ -116,6 +140,15 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
 
 FixMCCG::~FixMCCG()
 {
+
+  delete [] table_v12;
+  delete [] table_f_cv1;
+  delete [] table_f_cv2;
+  delete [] real_mols;
+  delete [] fake_mols;
+  delete [] v11_list;
+  delete [] v12_list;
+  delete [] v22_list; 
   //delete [] xstr;
   //delete [] ystr;
   //delete [] zstr;
@@ -129,6 +162,7 @@ int FixMCCG::setmask()
 {
   int mask = 0;
   mask |= POST_FORCE;
+  mask |= POST_INTEGRATE;
   //mask |= POST_FORCE_RESPA;
   //mask |= MIN_POST_FORCE;
   return mask;
@@ -138,7 +172,7 @@ int FixMCCG::setmask()
 
 void FixMCCG::init()
 {
-  printf("init MCCG!\n");
+  printf("init MCCG!\n num molecule %d \n", atom->nmolecule);
   //First calculate number of molecules
 
   // check variables
@@ -226,6 +260,37 @@ void FixMCCG::min_setup(int vflag)
 }
 
 /* ---------------------------------------------------------------------- */
+//THIS REALLY NEEDS TO BE REWRITTEN. THIS IS NOT GOOD CODING.
+void FixMCCG::post_integrate()
+{
+  printf("post integrate!\n num molecule %d \n", atom->nmolecule);
+  double **x = atom->x;
+  int *mask = atom->mask;
+  int *type = atom->type;
+  int nlocal = atom->nlocal;
+  tagint *molecule = atom->molecule;
+
+  for (int i = 0; i < nlocal; i++)
+  {
+  	  int molid = molecule[i];
+  	  int atomType = type[i]; 
+      for (int j = 0; j < nlocal; j++)
+      {
+      		if((atomType + num_mccg_atoms == type[j]) && (molid == molecule[j] - 1) )
+      		{
+      			x[i][0] = x[j][0];
+      			x[i][1] = x[j][1];
+      			x[i][2] = x[j][2];
+      		}
+      
+      }
+  
+  }
+
+}
+
+
+/* ---------------------------------------------------------------------- */
 
 void FixMCCG::post_force(int vflag)
 {
@@ -234,6 +299,22 @@ void FixMCCG::post_force(int vflag)
   double **f = atom->f;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
+  tagint *molecule = atom->molecule;
+
+  
+  printf("Num local %d\n", nlocal);
+  for (int i = 0; i < nlocal; i++)
+  {
+  ;
+  	//printf("coords %f %f %f molind %d molatom %d", x[i][0], x[i][1], x[i][2], molindex[i], molatom[i]);
+    printf("index %d coords %f %f %f mask %d molecule %d\n", i, x[i][0], x[i][1], x[i][2], mask[i], molecule[i]);
+
+  }
+  
+  for (int i = 0; i < len(real_mols); i++)
+  {
+  		
+  }
 /*
   // update region if necessary
 
@@ -300,6 +381,138 @@ void FixMCCG::post_force(int vflag)
   }*/
 }
 
+int FixMCCG::get_CV_index(double cv1_val)
+{
+	return (cv1_val - cv1_min) / cv1_delta;
+}
+
+int FixMCCG::get_CV_index(double cv1_val, double cv2_val)
+{
+	int cv1_index, cv2_index;
+	cv1_index = (cv1_val - cv1_min) / cv1_delta;
+	cv2_index = (cv2_val - cv2_min) / cv2_delta;
+	
+	return cv2_num_points * cv1_index + cv2_index;
+
+}
+
+void FixMCCG::readRealMols(char * file)
+{
+	char line[MAXLINE];
+	FILE * fp;
+	fp = fopen(file, "r");
+	fgets(line,MAXLINE,fp); // comment
+	fgets(line,MAXLINE,fp);
+	int numMols;
+	sscanf(line,"NUM %i",&numMols);
+	
+	memory->create(real_mols,   numMols / 2, "mccg:real_mols");
+	memory->create(fake_mols,   numMols / 2, "mccg:fake_mols");
+	memory->create(v11_list,   numMols / 2, "mccg:v11_list");
+	memory->create(v22_list,   numMols / 2, "mccg:v22_list");
+	memory->create(v12_list,   numMols / 2, "mccg:v12_list");
+
+    for(int i=0; i<table_num_points; i++) 
+    {
+     	fgets(line,MAXLINE,fp);
+    	sscanf(line,"%i %i %i", &real_mols[i], &fake_mols[i], &num_mccg_atoms);
+    }
+
+
+}
+
+void FixMCCG::readCouplingTable(char * file)
+{
+	printf("read %s\n", file);
+	/*std::ifstream inf(file);
+	
+	if (!inf)
+	{
+		error->all(FLERR,"Coupling file cannot be opened for reading!");
+	}
+	while(inf)
+	{
+		std::string strInput;		
+		getline(inf, strInput);
+		std::cout << strInput << std::endl;
+		
+		
+		if (strstr(strInput,"NCV") == strInput) 
+		{
+			std::cout << "NCV" << std::endl;
+		}
+	
+	}*/
+	
+	
+	char line[MAXLINE];
+	FILE * fp;
+	fp = fopen(file, "r");
+	fgets(line,MAXLINE,fp); // comment
+	fgets(line,MAXLINE,fp); // Blank line
+	
+	
+	int num_q;
+	fgets(line,MAXLINE,fp);
+	sscanf(line,"N %i NCV %i",&table_num_points,&num_q);
+	//printf("NumCVs %d num_q %d", numCVs, num_q);
+	if(numCVs != num_q) error->one(FLERR,"Inconsistent number of CVs.");
+	
+	if (numCVs == 1)
+	{
+		int indx;
+    	fgets(line,MAXLINE,fp);
+    	sscanf(line,"CV %i min %lg max %lg bins %i",&indx,&cv1_min,&cv1_max,&cv1_num_points);
+    	if(indx != 1) error->one(FLERR,"Expecting CVs in correct order");
+
+	
+		memory->create(table_v12,   table_num_points, "mccg:table_v12");
+  		memory->create(table_f_cv1, table_num_points, "mccg:table_f_cv1");
+	
+		fgets(line,MAXLINE,fp); // Blank line
+  
+    	// Read tables: outer_loop == CV1 and inner_loop == CV2
+    	double cv1, cv2;
+    	for(int i=0; i<table_num_points; i++) 
+    	{
+     		fgets(line,MAXLINE,fp);
+    		sscanf(line,"%i %lg %lg %lg",&indx, &cv1, &table_v12[i], &table_f_cv1[i]);
+    	}
+    	
+    	cv1_delta = (cv1_max - cv1_min) / double(cv1_num_points - 1);
+	}
+	else if(numCVs == 2){
+	    int indx;
+    	fgets(line,MAXLINE,fp);
+    	sscanf(line,"CV %i min %lg max %lg bins %i",&indx,&cv1_min,&cv1_max,&cv1_num_points);
+    	if(indx != 1) error->one(FLERR,"Expecting CVs in correct order");
+
+    	fgets(line,MAXLINE,fp);
+    	sscanf(line,"CV %i min %lg max %lg bins %i",&indx,&cv2_min,&cv2_max,&cv2_num_points);
+    	if(indx != 2) error->one(FLERR,"Expecting CVs in correct order");
+	
+		memory->create(table_v12,   table_num_points, "mccg:table_v12");
+  		memory->create(table_f_cv1, table_num_points, "mccg:table_f_cv1");
+  		memory->create(table_f_cv2, table_num_points, "mccg:table_f_cv2");
+	
+		fgets(line,MAXLINE,fp); // Blank line
+  
+    	// Read tables: outer_loop == CV1 and inner_loop == CV2
+    	double cv1, cv2;
+    	for(int i=0; i<table_num_points; i++) 
+    	{
+     		fgets(line,MAXLINE,fp);
+    		sscanf(line,"%i %lg %lg %lg %lg %lg",&indx, &cv1, &cv2, &table_v12[i], &table_f_cv1[i], &table_f_cv2[i]);
+    	}
+    	
+    	cv1_delta = (cv1_max - cv1_min) / double(cv1_num_points - 1);
+		cv2_delta = (cv2_max - cv2_min) / double(cv2_num_points - 1);
+	
+	}
+	
+	//while (())
+
+}
 
 
 /* ----------------------------------------------------------------------
