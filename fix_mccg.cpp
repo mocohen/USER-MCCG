@@ -24,6 +24,7 @@ NOTE: YOU CURRENTLY CANNOT HAVE ATOMS OF SAME TYPE ON SAME MOLECULE
 #include "memory.h"
 #include "error.h"
 #include "force.h"
+#include "compute_pe_atom.h"
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -70,6 +71,8 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   readCouplingTable(arg[3]);
   printf("finished reading table\n");
   readRealMols(arg[6]);
+  post_integrate();
+  
 
 }
 
@@ -136,7 +139,6 @@ void FixMCCG::min_setup(int vflag)
 }
 
 /* ---------------------------------------------------------------------- */
-//THIS REALLY NEEDS TO BE REWRITTEN. THIS IS NOT GOOD CODING.
 void FixMCCG::post_integrate()
 {
   printf("post integrate!\n num molecule %d \n", atom->nmolecule);
@@ -145,18 +147,23 @@ void FixMCCG::post_integrate()
   int *type = atom->type;
   int nlocal = atom->nlocal;
   tagint *molecule = atom->molecule;
+  tagint *tag = atom->tag;
 
   for (int i = 0; i < nlocal; i++)
   {
   	  int molid = molecule[i];
-  	  int atomType = type[i]; 
+  	  int atomTag = tag[i]; 
+  	  //printf("atomTag %d \n", atomTag);
       for (int j = 0; j < nlocal; j++)
       {
-      		if((atomType + num_mccg_atoms == type[j]) && (molid == molecule[j] - 1) )
+      		//printf("corresponding tag %d \n", tag[j]);
+      		if(corresponding_atom_tags[atomTag - 1] == tag[j])
       		{
-      			x[i][0] = x[j][0];
-      			x[i][1] = x[j][1];
-      			x[i][2] = x[j][2];
+      			//printf("pos %f %f %f \n", x[i][0], x[i][1], x[i][2]);
+      			//offset positions slightly so that vdw don't produce nan
+      			x[i][0] = x[j][0] + 0.00001;
+      			x[i][1] = x[j][1] + 0.00001;
+      			x[i][2] = x[j][2] + 0.00001;
       		}
       
       }
@@ -170,21 +177,24 @@ void FixMCCG::post_integrate()
 
 void FixMCCG::post_force(int vflag)
 {
-  printf("mccg post force\n");
+  //need to compute per atom energies.
+  printf("mccg post force\n\n\n\n\n");
   double **x = atom->x;
   double **f = atom->f;
   int *mask = atom->mask;
   int nlocal = atom->nlocal;
   tagint *molecule = atom->molecule;
+  tagint *tag = atom->tag;
 
   printf("Loop through mccg mols\n");
   for (int i = 0; i < sizeof(real_mols)/sizeof(int)-1; i++)
   {
-  		printf("interation %d through mccg mols\n", i);
+  		
   		double v11, v22, v12, c1, c2, d1, d2, cv_val, discrim, norm_factor;
   		int cv_index;
-  		v11 = getEnergy(i);
-  		v22 = getEnergy(i + 1);
+  		v11 = -getEnergy(i);
+  		v22 = -getEnergy(i + 1);
+  		
   		if (numCVs == 1)
   		{
   			cv_index = get_CV_index(1.0); 
@@ -199,8 +209,8 @@ void FixMCCG::post_force(int vflag)
   		v12 = table_v12[cv_index];
   		
   		// Calculate Eigenvector for 2x2 matrix for lower E'val
-  		discrim = pow(v11, 2) + 4*pow(v12, 2) - (2* v11*v22);
-  		d1 = v11 -v22 -sqrt(discrim);
+  		discrim = pow(v11, 2) + 4*pow(v12, 2) - (2* v11*v22) + pow(v22, 2);
+  		d1 = (v11 -v22 -sqrt(discrim)) / (2*v12);
   		d2 = 1;
   		norm_factor = sqrt(pow(d1,2) + pow(d2,2));
   		c1 = d1 / norm_factor;
@@ -213,41 +223,68 @@ void FixMCCG::post_force(int vflag)
   		e_vector1[i] = c1;
   		e_vector2[i] = c2;
   		
+  		
   		double discr = pow(v12,2) + pow((v11 - v22)/2, 2 );
   		e_value[i] = 0.5 * (v11+v22) - sqrt(discr);
+  		printf("interation %d through mccg mols\nd1 %f d2 %f c1 %f c2 %f eval %f\n", i, d1, d2, c1, c2, e_value[i]);
   }
   printf("Loop through atoms to change forces\n");
   //calculate hellman-feyman forces for 2x2
   for (int i = 0; i < nlocal; i++)
   {
-  	   printf("interation %d through atoms\n", i);
-  	   int molind = (molecule[i] - 1) / 2;
-  	   int v12_ind;
-  	   double v11, v22, c1, c2;
+  	    if ((mask[i] & groupbit) && (corresponding_atom_tags[i] != -1))
+  	    {
+  	   		int molind = (molecule[i] - 1) / 2;
+  	   		int v12_ind;
+  	   		double v11, v22, c1, c2;
   	   
-  	   v11 = v11_list[i];
-  	   v12_ind = v12_index[i];
-  	   v22 = v22_list[i];
+  	   		printf("interation %d through atoms\n molid %d tag %d corr %d\n", i, molind, tag[i], corresponding_atom_tags[i]);
   	   
-  	   c1 = e_vector1[i];
-  	   c2 = e_vector2[i];
-  
-  	   for (int j = 0; j < 3; j++)
-  	   {
-  	   		printf("x y z\n");
-  	   		double term1, term2, term3;
-  	   		double dcvdq = 1.0;
-  	   		double dv12 = 1.0;
+  	   		v11 = v11_list[molind];
+  	   		v12_ind = v12_index[molind];
+  	   		v22 = v22_list[molind];
+  	   
+  	   		c1 = e_vector1[molind];
+  	   		c2 = e_vector2[molind];
+  	   		printf("v11 %f v12 %f v22 %f c1 %f  c2 %f\n", v11, table_v12[v12_ind], v22, c1, c2);
   	   		
-  	   		term1 = pow(c1, 2)*f[i][j];
-  	   		term2 = pow(c2, 2)*f[i][j];
-  	   		term3 = 2*c1*c2*dcvdq*dv12; 
-  	   		f[i][j] = term1 + term2 + (2*term3);
+  			//find other atom
+  			int corr_ind;
+  			for (int j = 0; j < nlocal; j++){
+  				//printf("tag %d, \n", tag[j]);
+  				if(corresponding_atom_tags[i] == tag[j])
+  				{ 
+  					//printf("corr_ind %d\n", j);
+  					corr_ind = j;
+  				}
+  			}
+  			
+  			
+  	   		for (int j = 0; j < 3; j++)
+  	   		{
+  	   		
+  	   		
+  	   			//printf("x y z\n");
+  	   			double term1, term2, term3;
+  	   			double dcvdq = 1.0;
+  	   			double dv12 = 1.0;
+  	   			//printf("force %f force \n", f[i][j]);
+  	   			term1 = pow(c1, 2)*f[i][j];
+  	   			term2 = pow(c2, 2)*f[corr_ind][j];
+  	   			term3 = 2*c1*c2*dcvdq*dv12; 
+  	   			f[i][j] = term1 + term2 + (2*term3);
+  	   			printf("term 1 %f term2 %f term3 %f hf-force %f\n",term1, term2, term3, term1 + term2 + (2*term3));
+  	   		}
   	   
   	   }
   
   }
 
+}
+
+void FixMCCG::min_post_force(int vflag)
+{
+  post_force(vflag);
 }
 
 int FixMCCG::get_CV_index(double cv1_val)
@@ -282,15 +319,22 @@ void FixMCCG::readRealMols(char * file)
 	sscanf(line,"NUM %i",&numMols);
 	printf("\nNum MOls %d\n", numMols);
 	
+	
 	//int numMols = 1;
 	memory->create(real_mols,   numMols, "mccg:real_mols");
 	memory->create(fake_mols,   numMols, "mccg:fake_mols");
+	memory->create(num_mccg_atoms,   numMols, "mccg:num_mccg_atoms");
 	memory->create(v11_list,   	numMols, "mccg:v11_list");
 	memory->create(v22_list,   	numMols, "mccg:v22_list");
 	memory->create(v12_index,   numMols, "mccg:v12_list");
 	memory->create(e_vector1, 	numMols, "mccg:e_vector1");
 	memory->create(e_vector2, 	numMols, "mccg:e_vector2");
 	memory->create(e_value, 	numMols, "mccg:e_value");
+	memory->create(corresponding_atom_tags,(atom->natoms), "mccg:corresponding_atom_tags");
+	
+	for(int i = 0; i < atom->natoms; i++ ){
+		corresponding_atom_tags[i] = -1;
+	}
 	
 	printf("Done allocating\n");
 
@@ -302,7 +346,15 @@ void FixMCCG::readRealMols(char * file)
      	//real_mols[i] = 1;
      	//num_mccg_atoms = 1;
      	//int mccg_atoms;
-    	sscanf(line,"%d %d %d", &real_mols[i], &fake_mols[i], &num_mccg_atoms);
+    	sscanf(line,"MOL %d %d %d", &real_mols[i], &fake_mols[i], &num_mccg_atoms[i]);
+    	for (int j=0; j< num_mccg_atoms[i]; j++)
+    	{
+    		fgets(line,MAXLINE,fnp);
+    		int a, b;
+    		sscanf(line,"%d %d", &a, &b);
+    		corresponding_atom_tags[a-1] = b;
+    		corresponding_atom_tags[b-1] = a;
+    	}
     }
     printf("done read\n");
 
