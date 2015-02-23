@@ -18,6 +18,10 @@ FixStyle(mccg,FixMCCG)
 
 #include "fix.h"
 
+#include "compute_pe_atom.h"
+
+
+
 namespace LAMMPS_NS {
 
 class FixMCCG : public Fix {
@@ -67,6 +71,7 @@ class FixMCCG : public Fix {
   double * e_vector2;
   double * e_value;
   
+  ComputePEAtom *compute_pe_atom;
   
   //char *xstr,*ystr,*zstr;
   //char *idregion;

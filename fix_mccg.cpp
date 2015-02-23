@@ -24,7 +24,7 @@ NOTE: YOU CURRENTLY CANNOT HAVE ATOMS OF SAME TYPE ON SAME MOLECULE
 #include "memory.h"
 #include "error.h"
 #include "force.h"
-#include "compute_pe_atom.h"
+
 
 using namespace LAMMPS_NS;
 using namespace FixConst;
@@ -63,15 +63,22 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   		printf("NumCVs %d \n", numCVs);
   		std::cout << numCVs << std::endl;
   }
-  else error->all(FLERR,"Illegal fix mccg command");
+  else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile");
   
   
-  
+  char **computeArgs;
+  memory->create(computeArgs,   4, 15, "mccg:computeArgs");
+  strcpy(computeArgs[0], "compute");
+  strcpy(computeArgs[1],"pe_comp_zyx");
+  strcpy(computeArgs[2], "all");
+  strcpy(computeArgs[3], "pe");
   
   readCouplingTable(arg[3]);
   printf("finished reading table\n");
   readRealMols(arg[6]);
   post_integrate();
+  
+  ComputePEAtom pe_atom(lmp, 4, computeArgs);
   
 
 }
