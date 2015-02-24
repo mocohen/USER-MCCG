@@ -36,6 +36,8 @@ class FixMCCG : public Fix {
   void min_post_force(int);
   void post_integrate();
   void readCouplingTable(char * file);
+  void compute_peratom();
+  //void createPlumedObject(int narg, char **arg);
   int get_CV_index(double cv1_val);
   int get_CV_index(double cv1_val, double cv2_val);
   void readRealMols(char * file);
@@ -71,8 +73,14 @@ class FixMCCG : public Fix {
   double * e_vector2;
   double * e_value;
   
-  ComputePEAtom *compute_pe_atom;
+  int compute_pe_ID;
   
+  class ComputePEAtom *compute_pe_atom;
+  
+  double *energy;
+  int pairflag,bondflag,angleflag,dihedralflag,improperflag,kspaceflag;
+  int nmax;
+//  PLMD::Plumed*plumed;
   //char *xstr,*ystr,*zstr;
   //char *idregion;
   //int xvar,yvar,zvar,xstyle,ystyle,zstyle;
