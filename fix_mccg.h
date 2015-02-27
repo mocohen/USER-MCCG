@@ -17,6 +17,7 @@ FixStyle(mccg,FixMCCG)
 #define LMP_FIX_MCCG_H
 
 #include "fix.h"
+#include "../Plumed.h"
 
 #include "compute_pe_atom.h"
 
@@ -37,13 +38,16 @@ class FixMCCG : public Fix {
   void post_integrate();
   void readCouplingTable(char * file);
   void compute_peratom();
-  //void createPlumedObject(int narg, char **arg);
+  void createPlumedObject(int narg, char **arg);
   int get_CV_index(double cv1_val);
   int get_CV_index(double cv1_val, double cv2_val);
   void readRealMols(char * file);
   double getEnergy(int molid);
 //  double compute_vector(int);
 //  double memory_usage();
+
+ protected:
+    class ComputePEAtom *compute_pe_atom;
 
  private:
   //double xvalue,yvalue,zvalue;
@@ -73,14 +77,29 @@ class FixMCCG : public Fix {
   double * e_vector2;
   double * e_value;
   
+  double ** f_coupling;
+  
+  
   int compute_pe_ID;
   
-  class ComputePEAtom *compute_pe_atom;
+
   
   double *energy;
   int pairflag,bondflag,angleflag,dihedralflag,improperflag,kspaceflag;
   int nmax;
-//  PLMD::Plumed*plumed;
+  
+  
+  
+  //PLUMED VARS
+  PLMD::Plumed*plumed;
+  int nlocal;
+// array of atom indexes local to this process:
+  int*gatindex;
+// array of masses for local atoms:
+  double*masses;
+// array of charges for local atoms:
+  double*charges;
+// this is something to enable respa
   //char *xstr,*ystr,*zstr;
   //char *idregion;
   //int xvar,yvar,zvar,xstyle,ystyle,zstyle;
