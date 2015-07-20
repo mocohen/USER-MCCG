@@ -1,0 +1,3 @@
+# PLUMED: shared installation
+set(PLUMED_LOAD  /project/gavoth/mocohen/source/plumed/plumed_mccg/plumed-2.1.1/src/lib/libplumed.so -ldl )
+set(PLUMED_DEPENDENCIES  /project/gavoth/mocohen/source/plumed/plumed_mccg/plumed-2.1.1/src/lib/libplumed.so)

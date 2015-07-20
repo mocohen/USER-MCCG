@@ -337,7 +337,6 @@ void FixMCCG::post_force(int vflag)
   double energ = 0.0;
   double *potener = &energ;
   printf("plumed set stuff before calc");
-  printf("compute %p\n\n\n", compute_pe_atom );
 
 // pass all pointers to plumed:
   plumed->cmd("setStep",&step);
@@ -347,15 +346,16 @@ void FixMCCG::post_force(int vflag)
   plumed->cmd("setMasses",&masses[0]);
   if(atom->q) plumed->cmd("setCharges",&charges[0]);
   plumed->cmd("setVirial",&virial[0][0]);
+  plumed->cmd("setEngineArgs", &cv_array[0]);
   printf("Virial 1 : %f\n", Fix::virial[0]);
 // do the real calculation:
   printf("plumed right before calc");
-  printf("compute %p\n\n\n", compute_pe_atom );
   plumed->cmd("setEnergy",&potener);  
   plumed->cmd("calc");
-  printf("plumed after calc");
-  printf("compute %p\n\n\n", compute_pe_atom );
-  printf("energ %f\n", potener);
+  printf("plumed after calc\n");
+
+  printf("cvAray1 %f\n", cv_array[0]);
+  printf("cvAray2 %f\n", cv_array[1]);
   
   //compute_pe_atom =  (ComputePEAtom*)(modify->compute[compute_pe_ID]);
   //printf("plumed after lost");
@@ -386,11 +386,11 @@ void FixMCCG::post_force(int vflag)
   		
   		if (numCVs == 1)
   		{
-  			cv_index = get_CV_index(1.0); 
+  			cv_index = get_CV_index(cv_array[0]); 
   		}
   		if (numCVs == 2)
   		{
-			cv_index = get_CV_index(1.0, 2.0);
+			cv_index = get_CV_index(cv_array[0], cv_array[1]);
   		}
   		
   		
@@ -399,6 +399,7 @@ void FixMCCG::post_force(int vflag)
   		
   		// Calculate Eigenvector for 2x2 matrix for lower E'val
   		discrim = pow(v11, 2) + 4*pow(v12, 2) - (2* v11*v22) + pow(v22, 2);
+      printf("Discriminant %f v11 %f v22 %f v12 %f \n", discrim, v11, v22, v12);
   		d1 = (v11 -v22 -sqrt(discrim)) / (2*v12);
   		d2 = 1;
   		norm_factor = sqrt(pow(d1,2) + pow(d2,2));
@@ -464,14 +465,25 @@ void FixMCCG::post_force(int vflag)
   	   		
   	   			//printf("x y z\n");
   	   			double term1, term2, term3;
-  	   			double dcvdq = f_coupling[i][j];
-  	   			double dv12 = 1.0;
+            double dTot;
+            if(numCVs == 1){
+              double dv12 = table_f_cv1[v12_ind];
+              double dcvdq = f_coupling[i][j];
+              dTot = dv12*dcvdq;
+            }
+            else if(numCVs == 2){
+              double dv12_1 = table_f_cv1[v12_ind];
+              double dcvdq_1 = f_coupling[i][j];
+              double dv12_2 = table_f_cv2[v12_ind];
+              double dcvdq_2 = f_coupling[corr_ind][j];
+              dTot = (dv12_1*dcvdq_1) + (dv12_2*dcvdq_2);
+            } 
   	   			//printf("force %f force \n", f[i][j]);
   	   			term1 = pow(c1, 2)*f[i][j];
   	   			term2 = pow(c2, 2)*f[corr_ind][j];
-  	   			term3 = 2*c1*c2*dcvdq*dv12; 
+  	   			term3 = 2*c1*c2*dTot; 
   	   			f[i][j] = term1 + term2 + (2*term3);
-  	   			printf("term 1 %f term2 %f term3 %f hf-force %f\n",term1, term2, term3, term1 + term2 + (2*term3));
+  	   			printf("term 1 %f term2 %f term3 %f dtot %f\n",term1, term2, term3, dTot);
   	   			printf("position %f\n", x[i][j]);
   	   			printf("plumed force : %f\n", f_coupling[i][j]);
   	   		}
@@ -729,6 +741,7 @@ void FixMCCG::readRealMols(char * file)
 	memory->create(energy, (atom->natoms), "mccg:energy" );
 	memory->create(f_coupling, (atom->natoms), 3, "mccg:f_coupling");
 	
+	
 	for(int i = 0; i < atom->natoms; i++ ){
 		corresponding_atom_tags[i] = -1;
 	}
@@ -792,6 +805,7 @@ void FixMCCG::readCouplingTable(char * file)
 	
 		memory->create(table_v12,   table_num_points, "mccg:table_v12");
   		memory->create(table_f_cv1, table_num_points, "mccg:table_f_cv1");
+  		memory->create(cv_array, 1, "mccg:cv_array");
 	
 		fgets(line,MAXLINE,fp); // Blank line
   
@@ -819,6 +833,7 @@ void FixMCCG::readCouplingTable(char * file)
 		memory->create(table_v12,   table_num_points, "mccg:table_v12");
   		memory->create(table_f_cv1, table_num_points, "mccg:table_f_cv1");
   		memory->create(table_f_cv2, table_num_points, "mccg:table_f_cv2");
+  		memory->create(cv_array, 2, "mccg:cv_array");
 	
 		fgets(line,MAXLINE,fp); // Blank line
   

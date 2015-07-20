@@ -58,7 +58,7 @@ class FixMCCG : public Fix {
   double cv1_min, cv1_max, cv1_delta;
   double cv2_min, cv2_max, cv2_delta;
   
-  
+  double * cv_array;
   
   double * table_v12;     // Table of coupling
   double * table_f_cv1;   // Table of force from first CV

@@ -1,0 +1,4 @@
+#! /bin/bash
+echo 'NOTE: shell only version, useful when plumed is cross compiled' >&2
+export PLUMED_ROOT="/project/gavoth/mocohen/source/plumed/plumed_mccg/plumed-2.1.1"
+source "$PLUMED_ROOT"/scripts/newcv.sh

@@ -1,0 +1,12 @@
+/html
+/latex
+/*.tmp
+/automatic
+/*PP.txt
+/errors
+/modifier_file
+/*aux
+/*doc*
+/manual.pdf
+/regtests
+

@@ -1,0 +1,3 @@
+# PLUMED: runtime installation
+set(PLUMED_LOAD  /project/gavoth/mocohen/source/plumed/plumed_mccg/plumed-2.1.1/src/wrapper/Plumed.o -ldl )
+set(PLUMED_DEPENDENCIES) 

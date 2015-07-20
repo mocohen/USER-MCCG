@@ -1,0 +1,241 @@
+/**
+\page moving Moving from Plumed 1 to Plumed 2
+
+Syntax in PLUMED 2 has been completely redesigned. The main difference is that
+whereas in PLUMED 1 lines could be inserted in any order, 
+in PLUMED 2 the order of the lines matters. This is due to a major change in 
+the internal architecture of PLUMED. In version 2, commands (or "actions") are
+executed in the order they are found in the input file.
+Because of this, you must e.g. first compute a collective variable and then print it
+later. More information can be found in the Section about \ref Syntax.
+
+Another very important change is in the way groups are used, discussed below.
+Finally, many features appear under a different name in the new version.
+
+\section moving-Groups Groups
+
+In Plumed 1 groups (lists) were used for two tasks:
+- To provide centers of masses to collective variables such as distances, angles, etc. This is 
+  now done by defining virtual atoms using either \ref CENTER or \ref COM
+- To provide lists of atoms to collective variables such as coordination, gyration radius, etc.
+  This is now done directly in the line that defines the collective variable. 
+
+If you would still like to use groups you can use the \ref GROUP commands.  Whenever the label
+for a \ref GROUP action appears in the input it is replaced by the list of atoms that were 
+specified in the \ref GROUP.
+
+\section moving-Directives Directives
+
+What follows is a list of all the documented directives of Plumed 1 together with their 
+plumed 2 equivalents.  Be aware that the input syntaxes for these directives are not totally 
+equivalent.  You should read the documentation for the Plumed 2 Action.
+
+<TABLE>
+<TR> 
+  <TD> HILLS </TD>
+  <TD> \ref METAD </TD>
+</TR>
+<TR> 
+  <TD> WELLTEMPERED </TD>
+  <TD> \ref METAD with BIASFACTOR </TD>
+</TR>
+<TR> 
+  <TD> GRID </TD>
+  <TD> \ref METAD with GRID_MIN, GRID_MAX, and GRID_BIN </TD>
+</TR>
+<TR>
+  <TD> WRITE_GRID </TD>
+  <TD> \ref METAD with GRID_WFILE, GRID_WSTRIDE </TD>
+</TR>
+<TR>
+  <TD> READ_GRID </TD>
+  <TD> <b> currently missing </b> </TD>
+</TR>
+<TR>
+  <TD> MULTIPLE_WALKERS </TD>
+  <TD> \ref METAD with options WALKERS_ID, WALKERS_N, WALKERS_DIR, and WALKERS_RSTRIDE </TD>
+</TR>
+<TR>
+  <TD> NOHILLS </TD>
+  <TD> not needed (collective variables are not biased by default) </TD>
+</TR>
+<TR>
+  <TD> INTERVAL </TD>
+  <TD> \ref METAD with INTERVAL  </TD>
+</TR>
+<TR>
+  <TD> INVERT </TD>
+  <TD> <b> currently missing </b> </TD>
+</TR>
+<TR>
+  <TD> PTMETAD </TD>
+  <TD> not needed (replica exchange detected from MD engine) </TD>
+</TR>
+<TR>
+  <TD> BIASXMD </TD>
+  <TD> not needed (replica exchange detected from MD engine);
+       one should anyway use \ref RANDOM_EXCHANGES to get the normal behavior </TD>
+</TR>
+<TR>
+  <TD> UMBRELLA </TD>
+  <TD> \ref RESTRAINT </TD>
+</TR>
+<TR>
+  <TD> STEER </TD>
+  <TD> \ref MOVINGRESTRAINT </TD>
+</TR>
+<TR>
+  <TD> STEERPLAN </TD>
+  <TD> \ref MOVINGRESTRAINT </TD>
+</TR>
+<TR>
+  <TD> ABMD </TD>
+  <TD> \ref ABMD </TD>
+</TR>
+<TR>
+  <TD> UWALL </TD>
+  <TD> \ref UPPER_WALLS </TD>
+</TR>
+<TR>
+  <TD> LWALL </TD>
+  <TD> \ref LOWER_WALLS </TD>
+</TR>
+<TR>
+  <TD> EXTERNAL </TD>
+  <TD> \ref EXTERNAL </TD>
+</TR>
+<TR>
+  <TD> COMMITMENT </TD>
+  <TD> \ref COMMITTOR </TD>
+</TR>
+<TR>
+  <TD> PROJ_GRAD </TD>
+  <TD> \ref DUMPPROJECTIONS </TD>
+</TR>
+<TR>
+  <TD> DAFED </TD>
+  <TD> <b> currently missing</b> </TD>
+</TR>
+<TR>
+  <TD> DISTANCE </TD>
+  <TD> \ref DISTANCE </TD>
+</TR>
+<TR>
+  <TD> POSITION </TD>
+  <TD> \ref POSITION </TD>
+</TR>
+<TR>
+  <TD> MINDIST </TD>
+  <TD> \ref DISTANCES with keyword MIN (See also \ref mindist) </TD>
+</TR>
+<TR>
+  <TD> ANGLE </TD>
+  <TD> \ref ANGLE </TD>
+</TR>
+<TR>
+  <TD> TORSION </TD>
+  <TD> \ref TORSION </TD>
+</TR>
+<TR>
+  <TD> COORD </TD>
+  <TD> \ref COORDINATION </TD>
+</TR>
+<TR>
+  <TD> HBOND </TD>
+  <TD> <b> currently missing </b>, can be emulated with \ref COORDINATION </TD>
+</TR>
+<TR>
+  <TD> WATERBRIDGE </TD>
+  <TD> \ref BRIDGE </TD> 
+</TR>
+<TR>
+  <TD> RGYR </TD>
+  <TD> \ref GYRATION </TD>
+</TR>
+<TR>
+  <TD> DIPOLE </TD>
+  <TD> \ref DIPOLE </TD>
+</TR>
+<TR>
+  <TD> DIHCOR </TD>
+  <TD> \ref DIHCOR </TD>
+</TR>
+<TR>
+  <TD> ALPHABETA </TD>
+  <TD> \ref ALPHABETA </TD>
+</TR>
+<TR>
+  <TD> ALPHARMSD </TD>
+  <TD> \ref ALPHARMSD </TD>
+</TR>
+<TR>
+  <TD> ANTIBETARMSD </TD>
+  <TD> \ref ANTIBETARMSD </TD>
+</TR>
+<TR>
+  <TD> PARABETARMSD </TD>
+  <TD> \ref PARABETARMSD </TD>
+</TR>
+<TR>
+  <TD> ELSTPOT </TD>
+  <TD> <b> currently missing </b> </TD>
+</TR>
+<TR>
+  <TD> PUCKERING </TD>
+  <TD> <b> currently missing </b> </TD>
+</TR>
+<TR>
+  <TD> S_PATH </TD>
+  <TD> \ref PATHMSD, s component </TD>
+</TR>
+<TR>
+  <TD> Z_PATH </TD>
+  <TD> \ref PATHMSD, z component </TD>
+</TR>
+<TR>
+  <TD> TARGETED </TD>
+  <TD> \ref RMSD </TD>
+</TR>
+<TR>
+  <TD> ENERGY </TD>
+  <TD> \ref ENERGY </TD>
+</TR>
+<TR>
+  <TD> HELIX </TD>
+  <TD> <b> currently missing </b> </TD>
+</TR>
+<TR>
+  <TD> PCA </TD>
+  <TD> <b> currently missing </b> </TD>
+</TR>
+<TR>
+  <TD> SPRINT </TD>
+  <TD> \ref SPRINT </TD>
+</TR>
+<TR>
+  <TD> RDF </TD>
+  <TD> \ref DISTANCES, used in combination with HISTOGRAM / BETWEEN keyword </TD>
+</TR>
+<TR>
+  <TD> ADF </TD>
+  <TD> \ref ANGLES, used in combination with HISTOGRAM / BETWEEN keyword </TD>
+</TR>
+<TR>
+  <TD> POLY </TD>
+  <TD> \ref COMBINE </TD>
+</TR>
+<TR>
+  <TD> FUNCTION </TD>
+  <TD> \ref MATHEVAL </TD>
+</TR>
+<TR>
+  <TD> ALIGN_ATOMS </TD>
+  <TD> \ref WHOLEMOLECULES </TD>
+</TR>
+</TABLE>
+
+*/
+
+link: @subpage moving
+
+description: This tutorial explains how plumed 1 input files can be translated into the new plumed 2 syntax.
