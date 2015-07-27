@@ -295,8 +295,11 @@ void Atoms::updateEngineArgs(){
 }
 
 int Atoms::getEngineArgsSize(){
-  plumed_assert(engineArgsHaveBeenSet);
-  return engineArgs.size();
+  //plumed_assert(engineArgsHaveBeenSet);
+  if(engineArgsHaveBeenSet){
+    return engineArgs.size();
+  }
+  else return 0;
 }
 //***** END MCCG 
 

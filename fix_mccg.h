@@ -20,8 +20,8 @@ FixStyle(mccg,FixMCCG)
 #include "../Plumed.h"
 
 #include "compute_pe_atom.h"
-
-
+#include <fstream>
+#include <iostream>
 
 namespace LAMMPS_NS {
 
@@ -43,6 +43,7 @@ class FixMCCG : public Fix {
   int get_CV_index(double cv1_val, double cv2_val);
   void readRealMols(char * file);
   double getEnergy(int molid);
+  std::ofstream mccg_output;
 //  double compute_vector(int);
 //  double memory_usage();
 
