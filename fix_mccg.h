@@ -55,6 +55,7 @@ class FixMCCG : public Fix {
   int varflag,iregion;
   int numMolecules;
   int numCVs;
+  int outputFreq;
   int table_num_points, cv1_num_points, cv2_num_points;
   double cv1_min, cv1_max, cv1_delta;
   double cv2_min, cv2_max, cv2_delta;

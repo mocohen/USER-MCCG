@@ -66,7 +66,8 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
 {
   printf("Hello world MCCG\n");
   mccg_output.open ("mccg.out");
-  if (narg < 8) error->all(FLERR,"Illegal fix mccg command");
+  mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 \n";
+  if (narg < 9) error->all(FLERR,"Illegal fix mccg command");
   
 
   if (strstr(arg[4], "ncvs") == arg[4])
@@ -78,8 +79,8 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   		//printf("NumCVs %d \n", numCVs);
   		std::cout << numCVs << std::endl;
   }
-  else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile");
-  
+  else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq");
+  sscanf(arg[8], "%d", &outputFreq);
   
   char **computeArgs = new char*[3];
   //memory->create(computeArgs,   3, 15, "mccg:computeArgs");
@@ -335,7 +336,7 @@ void FixMCCG::post_force(int vflag)
   
 // local variable with timestep:
   int step=update->ntimestep;
-  mccg_output << "\nTimestep " << step << "\n";
+  //mccg_output << "\nTimestep " << step << "\n";
   
   double energ = 0.0;
   double *potener = &energ;
@@ -355,7 +356,7 @@ void FixMCCG::post_force(int vflag)
   //printf("plumed right before calc");
   plumed->cmd("setEnergy",&potener);  
   plumed->cmd("calc");
-  mccg_output << "CV ARRAY: " << cv_array[0] << "\n";
+  //mccg_output << "CV ARRAY: " << cv_array[0] << "\n";
   //printf("plumed after calc\n");
 
   //printf("cvAray1 %f\n", cv_array[0]);
@@ -395,7 +396,7 @@ void FixMCCG::post_force(int vflag)
   		if (numCVs == 2)
   		{
 			cv_index = get_CV_index(cv_array[0], cv_array[1]);
-      mccg_output << "CV INDEX: " << cv_index << "\n";
+      //mccg_output << "CV INDEX: " << cv_index << "\n";
   		}
   		
   		
@@ -403,7 +404,7 @@ void FixMCCG::post_force(int vflag)
   		v12 = table_v12[cv_index];
 
       if(fabs(v12) < 0.00001){
-          mccg_output << "v12 is small!\n";
+          //mccg_output << "v12 is small!\n";
           d1 = 0;
           d2 = 1;
 
@@ -412,7 +413,7 @@ void FixMCCG::post_force(int vflag)
         double trace = v11+v22;
         double determ = (v11*v22) - (v12*v12);
         discrim = (pow(trace,2) / 4.0) - determ;
-        mccg_output << "discrim: " << discrim << " determ " << determ << " trace " << trace << "\n";
+        //mccg_output << "discrim: " << discrim << " determ " << determ << " trace " << trace << "\n";
         //printf("Discriminant %f v11 %f v22 %f v12 %f \n", discrim, v11, v22, v12);
         d1 = (trace / 2.0) - sqrt(discrim) - v22;
         d2 = v12;
@@ -423,7 +424,7 @@ void FixMCCG::post_force(int vflag)
   		// Calculate Eigenvector for 2x2 matrix for lower E'val
 
   		norm_factor = sqrt(pow(d1,2) + pow(d2,2));
-      mccg_output << "d1 " << d1 << " d2 " << d2 << " norm_factor " << norm_factor  << "\n";
+      //mccg_output << "d1 " << d1 << " d2 " << d2 << " norm_factor " << norm_factor  << "\n";
   		c1 = d1 / norm_factor;
   		c2 = d2 / norm_factor;
   		
@@ -438,7 +439,8 @@ void FixMCCG::post_force(int vflag)
   		double discr = pow(v12,2) + pow((v11 - v22)/2, 2 );
   		e_value[i] = 0.5 * (v11+v22) - sqrt(discr);
   		//printf("interation %d through mccg mols\nd1 %f d2 %f c1 %f c2 %f eval %f\n", i, d1, d2, c1, c2, e_value[i]);
-      mccg_output << " mol " << i << " v11 " << v11 << " v22 " << v22 << " v12 " << v12 <<  " c1 " << c1 << " c2 " << c2 << " Eval " <<  e_value[i] << "\n";
+      //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
+      if(step%outputFreq == 0) mccg_output << step << "  " << v11 << "  " << v22 << "  " << v12 <<  "  " << c1 << "  " << c2 << "  " <<  e_value[i] << " " << cv_array[0] << " " << cv_array[1] << "\n";
   }
   //printf("Loop through atoms to change forces\n");
   //printf("compute %p\n\n\n", compute_pe_atom );
