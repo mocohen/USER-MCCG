@@ -387,8 +387,7 @@ void FixMCCG::post_force(int vflag)
   		double v11, v22, v12, c1, c2, d1, d2, cv_val, discrim, norm_factor;
   		int cv_index;
   		v11 = getEnergy(real_mols[i]);
-  		v22 = getEnergy(fake_mols[i]);
-  		
+  		v22 = getEnergy(fake_mols[i])+deltaFs[i];  		
   		if (numCVs == 1)
   		{
   			cv_index = get_CV_index(cv_array[0]); 
@@ -764,6 +763,7 @@ void FixMCCG::readRealMols(char * file)
 	memory->create(corresponding_atom_tags,(atom->natoms), "mccg:corresponding_atom_tags");
 	memory->create(energy, (atom->natoms), "mccg:energy" );
 	memory->create(f_coupling, (atom->natoms), 3, "mccg:f_coupling");
+  memory->create(deltaFs, numMols, "mccg:deltaFs");
 	
 	
 	for(int i = 0; i < atom->natoms; i++ ){
@@ -780,7 +780,7 @@ void FixMCCG::readRealMols(char * file)
      	//real_mols[i] = 1;
      	//num_mccg_atoms = 1;
      	//int mccg_atoms;
-    	sscanf(line,"MOL %d %d %d", &real_mols[i], &fake_mols[i], &num_mccg_atoms[i]);
+    	sscanf(line,"MOL %d %d %d %lg", &real_mols[i], &fake_mols[i], &num_mccg_atoms[i], &deltaFs[i]);
     	for (int j=0; j< num_mccg_atoms[i]; j++)
     	{
     		fgets(line,MAXLINE,fnp);

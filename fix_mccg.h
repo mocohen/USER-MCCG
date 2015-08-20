@@ -78,6 +78,7 @@ class FixMCCG : public Fix {
   double * e_vector1;
   double * e_vector2;
   double * e_value;
+  double * deltaFs;
   
   double ** f_coupling;
   
