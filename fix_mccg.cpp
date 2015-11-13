@@ -494,17 +494,18 @@ void FixMCCG::post_force(int vflag)
   	   		
   	   			//printf("x y z\n");
   	   			double term1, term2, term3;
-            double dTot;
+  	   			 
+            double dTot, dv12_1, dcvdq_1, dv12_2, dcvdq_2, dv12, dcvdq;
             if(numCVs == 1){
-              double dv12 = table_f_cv1[v12_ind];
-              double dcvdq = f_coupling[i][j];
+              dv12 = table_f_cv1[v12_ind];
+              dcvdq = f_coupling[i][j];
               dTot = dv12*dcvdq;
             }
             else if(numCVs == 2){
-              double dv12_1 = table_f_cv1[v12_ind];
-              double dcvdq_1 = f_coupling[i][j];
-              double dv12_2 = table_f_cv2[v12_ind];
-              double dcvdq_2 = f_coupling[corr_ind][j];
+               dv12_1 = table_f_cv1[v12_ind];
+               dcvdq_1 = f_coupling[i][j];
+               dv12_2 = table_f_cv2[v12_ind];
+               dcvdq_2 = f_coupling[corr_ind][j];
               dTot = (dv12_1*dcvdq_1) + (dv12_2*dcvdq_2);
             } 
   	   			//printf("force %f force \n", f[i][j]);
@@ -512,6 +513,7 @@ void FixMCCG::post_force(int vflag)
   	   			term2 = pow(c2, 2)*f[corr_ind][j];
   	   			term3 = 2*c1*c2*dTot; 
   	   			f[i][j] = term1 + term2 + (2*term3);
+  	   			//mccg_output << "dv12" << dv12_1 << dv12_2
   	   			//printf("term 1 %f term2 %f term3 %f dtot %f\n",term1, term2, term3, dTot);
   	   			//printf("position %f\n", x[i][j]);
   	   			//printf("plumed force : %f\n", f_coupling[i][j]);
