@@ -403,9 +403,15 @@ void FixMCCG::post_force(int vflag)
   		v12 = table_v12[cv_index];
 
       if(fabs(v12) < 0.00001){
-          //mccg_output << "v12 is small!\n";
-          d1 = 0;
-          d2 = 1;
+        if(v11 > v22){
+		d1 = 0;
+		d2 = 1;
+	}  
+	else{
+		d1 = 1;
+		d2 = 0;
+	}
+	//mccg_output << "v12 is small!\n"; 
 
       }
       else{
