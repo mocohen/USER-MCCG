@@ -243,12 +243,13 @@ void FixMCCG::post_integrate()
       		{
       			//printf("atom i %d tag i %d atom j %d tag j %d \n", i, atomTag, j, tag[j]);
       			//offset positions slightly so that vdw don't produce nan
-      			x[i][0] = x[j][0] + 0.00001;
-      			x[i][1] = x[j][1] + 0.00001;
-      			x[i][2] = x[j][2] + 0.00001;
+      			x[j][0] = x[i][0] + 0.00001;
+      			x[j][1] = x[i][1] + 0.00001;
+      			x[j][2] = x[i][2] + 0.00001;
       		}
       
       }
+      //printf("pos %f %f %f\n", x[i][0], x[i][1], x[i][2]);
   
   }
   //printf("done post integrate \n");
@@ -487,7 +488,19 @@ void FixMCCG::post_force(int vflag)
   				}
   			}
   			
+  			double dv12_1, dv12_2, dv12;
+  			if(numCVs == 1){
+  				dv12 = table_f_cv1[v12_ind];
+  			}
+  			else if(numCVs == 2){
+  				dv12_1 = table_f_cv1[v12_ind];
+  				dv12_2 = table_f_cv2[v12_ind];
+  			}
   			
+  			
+  			//if(step%outputFreq == 0) mccg_output << "atom: " << tag[i] << " v12 index: " << v12_ind << " dv12 " << dv12_1 << "  " << dv12_2 << "\n";
+  	   		//if(step%outputFreq == 0) mccg_output << "pos force1 force2  dcvdq1 dcvdq2\n";
+  	   		
   	   		for (int j = 0; j < 3; j++)
   	   		{
   	   		
@@ -495,25 +508,28 @@ void FixMCCG::post_force(int vflag)
   	   			//printf("x y z\n");
   	   			double term1, term2, term3;
   	   			 
-            double dTot, dv12_1, dcvdq_1, dv12_2, dcvdq_2, dv12, dcvdq;
-            if(numCVs == 1){
-              dv12 = table_f_cv1[v12_ind];
-              dcvdq = f_coupling[i][j];
-              dTot = dv12*dcvdq;
-            }
-            else if(numCVs == 2){
-               dv12_1 = table_f_cv1[v12_ind];
-               dcvdq_1 = f_coupling[i][j];
-               dv12_2 = table_f_cv2[v12_ind];
-               dcvdq_2 = f_coupling[corr_ind][j];
-              dTot = (dv12_1*dcvdq_1) + (dv12_2*dcvdq_2);
-            } 
+            	double dTot, dv12_1, dcvdq_1, dv12_2, dcvdq_2, dv12, dcvdq;
+            	if(numCVs == 1){
+             	 	//dv12 = table_f_cv1[v12_ind];
+              		dcvdq = f_coupling[i][j];
+              		dTot = dv12*dcvdq;
+            	}
+				else if(numCVs == 2){
+				   	//dv12_1 = table_f_cv1[v12_ind];
+				   	dcvdq_1 = f_coupling[i][j];
+				   	//dv12_2 = table_f_cv2[v12_ind];
+				   	dcvdq_2 = f_coupling[corr_ind][j];
+				  	dTot = (dv12_1*dcvdq_1) + (dv12_2*dcvdq_2);
+				} 
   	   			//printf("force %f force \n", f[i][j]);
   	   			term1 = pow(c1, 2)*f[i][j];
   	   			term2 = pow(c2, 2)*f[corr_ind][j];
-  	   			term3 = 2*c1*c2*dTot; 
-  	   			f[i][j] = term1 + term2 + (2*term3);
-  	   			//mccg_output << "dv12" << dv12_1 << dv12_2
+  	   			term3 = 2*c1*c2*dTot;
+  	   			double totForce = term1 + term2 + (2*term3);
+ 
+  	   			f[i][j] = totForce;
+  	   			f[corr_ind][j] = totForce;
+  	   			//if(step%outputFreq == 0) mccg_output << x[i][j] << " " << f[i][j] << " " << f[corr_ind][j] << " "  <<  dcvdq_1 << "  " << dcvdq_2 << " " << tempf <<  "\n";
   	   			//printf("term 1 %f term2 %f term3 %f dtot %f\n",term1, term2, term3, dTot);
   	   			//printf("position %f\n", x[i][j]);
   	   			//printf("plumed force : %f\n", f_coupling[i][j]);
