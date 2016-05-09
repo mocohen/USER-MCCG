@@ -218,8 +218,8 @@ void FixMCCG::post_integrate()
   compute_pe_atom->peatomflag = 1;
   //compute_pe_atom->invoked_flag |= INVOKED_ARRAY;
   //modify->addstep_compute(update->ntimestep +1);
-  //printf("start to initialize stuff \n");
-  //fflush(stdout);
+  printf("start to initialize stuff \n");
+  fflush(stdout);
   double **x = atom->x;
   int *mask = atom->mask;
   int *type = atom->type;
@@ -252,7 +252,7 @@ void FixMCCG::post_integrate()
       //printf("pos %f %f %f\n", x[i][0], x[i][1], x[i][2]);
   
   }
-  //printf("done post integrate \n");
+  printf("done post integrate \n");
 
 }
 
@@ -262,7 +262,7 @@ void FixMCCG::post_integrate()
 void FixMCCG::post_force(int vflag)
 {
   //need to compute per atom energies.
-  //printf("mccg post force\n\n\n\n\n");
+  printf("mccg post force\n\n\n\n\n");
   //printf("compute %p\n\n\n", compute_pe_atom );
   compute_pe_atom->invoked_flag |= INVOKED_ARRAY;
   modify->addstep_compute(update->ntimestep + 1);
@@ -405,13 +405,15 @@ void FixMCCG::post_force(int vflag)
 
       if(fabs(v12) < 0.00001){
         if(v11 > v22){
-			d1 = 0;
-			d2 = 1;
-		}  
-		else{
-			d1 = 1;
-			d2 = 0;
-		}
+		d1 = 0;
+		d2 = 1;
+	}  
+	else{
+		d1 = 1;
+		d2 = 0;
+	}
+	//mccg_output << "v12 is small!\n"; 
+
       }
       else{
         double trace = v11+v22;
@@ -720,7 +722,7 @@ void FixMCCG::createPlumedObject(int narg, char **arg)
       lengthUnits=0.052917725;
       timeUnits=0.001;
     } else error->all(FLERR,"Odd LAMMPS units, plumed cannot work with that");
-    printf("energy %f length %f time %f",energyUnits,lengthUnits,timeUnits );
+    printf("energy %f length %f time %f\n",energyUnits,lengthUnits,timeUnits );
     plumed->cmd("setMDEnergyUnits",&energyUnits);
     plumed->cmd("setMDLengthUnits",&lengthUnits);
     plumed->cmd("setMDTimeUnits",&timeUnits);
