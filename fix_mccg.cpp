@@ -289,7 +289,7 @@ void FixMCCG::post_force(int vflag)
     printf("charges %p\n", charges);
     fflush(stdout);  
     if(charges) {
-      prinf("charges exsists\n");
+      printf("charges exsists\n");
       fflush(stdout);
       delete [] charges;  
     }
