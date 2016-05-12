@@ -115,10 +115,10 @@ fflush(stdout);
   //Compute * cmop = modify->compute[compute_pe_ID];
   compute_pe_atom =  (ComputePEAtom*)(modify->compute[compute_pe_ID]);
   compute_pe_atom->peatomflag = 1;
-  printf("init compte pe atom %p\n", compute_pe_atom);
-fflush(stdout);  
+  //printf("init compte pe atom %p\n", compute_pe_atom);
+  //fflush(stdout);  
   readCouplingTable(arg[3]);
-  printf("finished reading table\n");
+  printf("finished reading mccg coupling table\n");
   readRealMols(arg[6]);
   post_integrate();
     //modify->addstep_compute(update->ntimestep + 1);
@@ -200,7 +200,7 @@ void FixMCCG::init()
 
 void FixMCCG::setup(int vflag)
 {
-  printf("setup MCCG\n");
+  //printf("setup MCCG\n");
   // WHAT DO I NEED TO DO HERE!!!!
   if (strstr(update->integrate_style,"verlet"))
     post_force(vflag);
@@ -223,8 +223,8 @@ void FixMCCG::post_integrate()
   compute_pe_atom->peatomflag = 1;
   //compute_pe_atom->invoked_flag |= INVOKED_ARRAY;
   //modify->addstep_compute(update->ntimestep +1);
-  printf("start to initialize stuff \n");
-  fflush(stdout);
+  /*printf("start to initialize stuff \n");
+  fflush(stdout);*/
   double **x = atom->x;
   int *mask = atom->mask;
   int *type = atom->type;
@@ -257,7 +257,7 @@ void FixMCCG::post_integrate()
       //printf("pos %f %f %f\n", x[i][0], x[i][1], x[i][2]);
   
   }
-  printf("done post integrate \n");
+  //printf("done post integrate \n");
 
 }
 
@@ -267,53 +267,43 @@ void FixMCCG::post_integrate()
 void FixMCCG::post_force(int vflag)
 {
   //need to compute per atom energies.
-  printf("mccg post force\n\n\n\n\n");
-  printf("compute %p\n\n\n", compute_pe_atom );
+  /*printf("mccg post force\n\n\n\n\n");
+  printf("compute %p\n\n\n", compute_pe_atom );*/
   compute_pe_atom->invoked_flag |= INVOKED_ARRAY;
   modify->addstep_compute(update->ntimestep + 1);
   //compute per atom energies:
   //compute_pe_atom->compute_peratom();
   compute_peratom();
-  printf("compute %p\n\n\n", compute_pe_atom );
-  printf("compute per atom done");
+  /*printf("compute %p\n\n\n", compute_pe_atom );
+  printf("compute per atom done");*/
   double **x = atom->x;
   double **f = atom->f;
   int *mask = atom->mask;
   //nlocal = atom->nlocal;
   tagint *molecule = atom->molecule;
   tagint *tag = atom->tag;
-  printf("before plumed runs\n");
+  /*printf("before plumed runs\n");
   printf("compute %p\n\n\n", compute_pe_atom );
-  fflush(stdout);
+  fflush(stdout);*/
   //PLUMED STUFFS
   /*---------------------------------------------------------------------*/
   int update_gatindex = 0 ;
   if(nlocal!=atom->nlocal){
-    printf("in if,%d %d\n", nlocal, atom->nlocal);
-    fflush(stdout);  
-    printf("charges %p\n", charges);
-    fflush(stdout);  
+    /*printf("in if,%d %d\n", nlocal, atom->nlocal);
+    fflush(stdout); */ 
     if(charges) {
-      printf("charges exsists\n");
-      fflush(stdout);
-      delete [] charges;
-      printf("deleted\n");
-      fflush(stdout);  
+      delete [] charges; 
     }
     if(masses) delete [] masses;
-    printf("masses\n");
-    fflush(stdout); 
     if(gatindex) delete [] gatindex;
-    printf("gatindex\n");
-    fflush(stdout); 
     nlocal=atom->nlocal;
     gatindex=new int [nlocal];
     masses=new double [nlocal];
     charges=new double [nlocal];
     update_gatindex=1;
   } else {
-    printf("in else\n");
-    fflush(stdout);  
+    //printf("in else\n");
+    //fflush(stdout);  
     for(int i=0;i<nlocal;i++){
       /*printf("i: %d\n", i);
       fflush(stdout); */
@@ -325,8 +315,8 @@ void FixMCCG::post_force(int vflag)
       }
     }
   }
-  printf("in between ifs \n");
-  printf("compute %p\n\n\n", compute_pe_atom );
+  //printf("in between ifs \n");
+  //printf("compute %p\n\n\n", compute_pe_atom );
   if(update_gatindex){
     for(int i=0;i<nlocal;i++){
       gatindex[i]=atom->tag[i]-1;
@@ -336,10 +326,10 @@ void FixMCCG::post_force(int vflag)
     plumed->cmd("setAtomsNlocal",&nlocal);
     plumed->cmd("setAtomsGatindex",gatindex);
   }
-  printf("after update gat");
+  /*printf("after update gat");
   printf("compute %p\n\n\n", compute_pe_atom );
   fflush(stdout);  
-  
+  */
   // set up local virial/box. plumed uses full 3x3 matrices
   double virial[3][3];
   for(int i=0;i<3;i++) for(int j=0;j<3;j++) virial[i][j]=0.0;
@@ -375,7 +365,7 @@ void FixMCCG::post_force(int vflag)
   plumed->cmd("setEnergy",&potener);  
   plumed->cmd("calc");
   //mccg_output << "CV ARRAY: " << cv_array[0] << "\n";
-  printf("plumed after calc\n");
+  //printf("plumed after calc\n");
 
   //printf("cvAray1 %f\n", cv_array[0]);
   //printf("cvAray2 %f\n", cv_array[1]);
@@ -397,7 +387,7 @@ void FixMCCG::post_force(int vflag)
   /*---------------------------------------------------------------------*/
 
   nlocal = atom->nlocal;
-  printf("Done plumed\n Loop through mccg mols\n");
+  //printf("Done plumed\n Loop through mccg mols\n");
   //printf("compute %p\n\n\n", compute_pe_atom );
   for (int i = 0; i < sizeof(real_mols)/sizeof(int)-1; i++)
   {
@@ -429,7 +419,7 @@ void FixMCCG::post_force(int vflag)
           d1 = 1;
           d2 = 0;
         }
-        mccg_output << "v12 is small!\n"; 
+        //mccg_output << "v12 is small!\n"; 
       }
       else{
         double trace = v11+v22;
@@ -464,7 +454,7 @@ void FixMCCG::post_force(int vflag)
       //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
       if(step%outputFreq == 0) mccg_output << step << "  " << v11 << "  " << v22 << "  " << v12 <<  "  " << c1 << "  " << c2 << "  " <<  e_value[i] << " " << cv_array[0] << " " << cv_array[1] << "\n";
   }
-  printf("Loop through atoms to change forces\n");
+  //printf("Loop through atoms to change forces\n");
   //printf("compute %p\n\n\n", compute_pe_atom );
   //calculate hellman-feyman forces for 2x2
   for (int i = 0; i < nlocal; i++)
