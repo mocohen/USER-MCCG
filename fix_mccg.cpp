@@ -284,11 +284,11 @@ void FixMCCG::post_force(int vflag)
   /*---------------------------------------------------------------------*/
   int update_gatindex = 0 ;
   if(nlocal!=atom->nlocal){
-    printf("in if\n");
+    printf("in if,%d %d\n", nlocal, atom->nlocal);
     fflush(stdout);  
-    if(charges) delete [] charges;
-    printf("charges\n");
-    fflush(stdout);    
+    printf("charges %p\n", charges);
+    fflush(stdout);  
+    if(charges) delete [] charges;  
     if(masses) delete [] masses;
     printf("masses\n");
     fflush(stdout); 
