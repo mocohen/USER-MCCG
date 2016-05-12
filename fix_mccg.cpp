@@ -288,7 +288,11 @@ void FixMCCG::post_force(int vflag)
     fflush(stdout);  
     printf("charges %p\n", charges);
     fflush(stdout);  
-    if(charges) delete [] charges;  
+    if(charges) {
+      prinf("charges exsists\n");
+      fflush(stdout);
+      delete [] charges;  
+    }
     if(masses) delete [] masses;
     printf("masses\n");
     fflush(stdout); 
