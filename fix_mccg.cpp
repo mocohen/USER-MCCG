@@ -62,7 +62,12 @@ For each MD timestep
 /* ---------------------------------------------------------------------- */
 
 FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
-  Fix(lmp, narg, arg)
+  Fix(lmp, narg, arg),
+  plumed(NULL),
+  nlocal(0),
+  gatindex(NULL),
+  masses(NULL),
+  charges(NULL)
 {
   printf("Hello world MCCG\n");
   mccg_output.open ("mccg.out");
