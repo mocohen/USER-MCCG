@@ -71,7 +71,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
 {
   printf("Hello world MCCG\n");
   mccg_output.open ("mccg.out");
-  mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 \n";
+  mccg_output << "#Timestep V11\tV22\tV12\tEvec1\tEvec2\tEval\n";
   if (narg < 9) error->all(FLERR,"Illegal fix mccg command");
     
 
@@ -401,7 +401,7 @@ void FixMCCG::post_force(int vflag)
     potentialEnergy += e_value[i];
 		//printf("interation %d through mccg mols\nd1 %f d2 %f c1 %f c2 %f eval %f\n", i, d1, d2, c1, c2, e_value[i]);
     //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
-    if(step%outputFreq == 0) mccg_output << step << "  " << v11 << "  " << v22 << "  " << v12 <<  "  " << c1 << "  " << c2 << "  " <<  e_value[i] << " " << cv_array[0] << " " << cv_array[1] << "\n";
+    if(step%outputFreq == 0) mccg_output << step << "\t" << v11 << "\t" << v22 << "\t" << v12 <<  "\t" << c1 << "\t" << c2 << "\t" <<  e_value[i] << "\n";
   }
   //calculate hellman-feyman forces for 2x2
   for (int i = 0; i < nlocal; i++)
