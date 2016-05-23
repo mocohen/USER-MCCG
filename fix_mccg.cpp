@@ -404,7 +404,7 @@ void FixMCCG::post_force(int vflag)
     if(step%outputFreq == 0)
     {
       char outString[84];
-      sprintf(outString, "%8d %8.12f %8.12f %8.12f %8.12f %8.12f %8.12f\n", step, v11, v22, v12, c1, c2, e_value[i]);
+      sprintf(outString, "%8d %12.4f %12.4f %12.4f %12.4f %12.4f %12.4f \n", step, v11, v22, v12, c1, c2, e_value[i]);
       mccg_output << outString;
       //mccg_output << step << "\t" << v11 << "\t" << v22 << "\t" << v12 <<  "\t" << c1 << "\t" << c2 << "\t" <<  e_value[i] << "\n";
     }
