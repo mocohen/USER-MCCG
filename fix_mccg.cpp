@@ -71,7 +71,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
 {
   printf("Hello world MCCG\n");
   mccg_output.open ("mccg.out");
-  mccg_output << "#Timestep V11\tV22\tV12\tEvec1\tEvec2\tEval\n";
+  mccg_output << "#Timestep         V11          V22          V12        Evec1        Evec2         Eval\n";
   if (narg < 9) error->all(FLERR,"Illegal fix mccg command");
     
 
