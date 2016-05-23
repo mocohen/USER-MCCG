@@ -768,7 +768,7 @@ void FixMCCG::readRealMols(char * file)
   {
     other_mols[i] = 1;
     for (int j=0; j<mccgMols; j++){
-      if((i + 1) = real_mols[j] || (i + 1) = fake_mols[j])
+      if((i + 1) == real_mols[j] || (i + 1) == fake_mols[j])
       {
         other_mols[i] = 0;
       }
