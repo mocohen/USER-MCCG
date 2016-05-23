@@ -66,8 +66,9 @@ class FixMCCG : public Fix {
   double * table_f_cv1;   // Table of force from first CV
   double * table_f_cv2;   // Table of force from second CV
   
-  int * real_mols;
-  int * fake_mols;
+  int * real_mols; //State 1
+  int * fake_mols; //State 2
+  int * other_mols; // Mols without 2 state behavior
   int * corresponding_atom_tags;
   int * num_mccg_atoms;
   

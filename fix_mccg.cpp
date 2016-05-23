@@ -73,67 +73,59 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   mccg_output.open ("mccg.out");
   mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 \n";
   if (narg < 9) error->all(FLERR,"Illegal fix mccg command");
-  
+    
 
-  if (strstr(arg[4], "ncvs") == arg[4])
-  {
-  		//int i;
-  		sscanf(arg[5], "%d", &numCVs);
-  		//printf("%d", i);
-  		//numCVs = *(int *)arg[5];
-  		//printf("NumCVs %d \n", numCVs);
-  		std::cout << numCVs << std::endl;
-  }
+    if (strstr(arg[4], "ncvs") == arg[4])
+    {
+    		//int i;
+    		sscanf(arg[5], "%d", &numCVs);
+    		//printf("%d", i);
+    		//numCVs = *(int *)arg[5];
+    		//printf("NumCVs %d \n", numCVs);
+    		std::cout << numCVs << std::endl;
+    }
   else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq");
   sscanf(arg[8], "%d", &outputFreq);
-  
+
   char **computeArgs = new char*[3];
-  //memory->create(computeArgs,   3, 15, "mccg:computeArgs");
-  //strcpy(computeArgs[0], "compute");
-  
   computeArgs[0] = (char *) "pe_comp_zyx";
   computeArgs[1]= (char *)  "all";
   computeArgs[2]= (char *)  "pe";
-  
-fflush(stdout);
-  
-  //ComputePEAtom pe_atom(lmp, 3, computeArgs);
-  //compute_pe_atom = new ComputePEAtom(lmp, 3, computeArgs);
-  
+    
+  //Add compute to force the computation of potential energy of each atom at every time step
+
   char **newarg = new char*[3];
   newarg[0] = (char *) "pe_comp_zy";
   newarg[1] = (char *) "all";
   newarg[2] = (char *) "pe";
 
   modify->add_compute(3,newarg);
-fflush(stdout);  
+  fflush(stdout);  
   compute_pe_ID = modify->find_compute(newarg[0]);
   printf("compute id %d\n", compute_pe_ID);
   delete [] newarg;
   delete [] computeArgs;
-  
-  //Compute * cmop = modify->compute[compute_pe_ID];
+
   compute_pe_atom =  (ComputePEAtom*)(modify->compute[compute_pe_ID]);
   compute_pe_atom->peatomflag = 1;
-  //printf("init compte pe atom %p\n", compute_pe_atom);
-  //fflush(stdout);  
+
+  //READ IN INFORMATION FOR MCCG
   readCouplingTable(arg[3]);
-  printf("finished reading mccg coupling table\n");
   readRealMols(arg[6]);
+  printf("finished reading mccg input files - data table and corresponding molecules table\n");
   post_integrate();
-    //modify->addstep_compute(update->ntimestep + 1);
-  
+
+  // CREATE PLUMED OBJECT
   char **plumedArgs = new char*[7];
-  //memory->create(plumedArgs,   7, 20, "mccg:plumedArgs");
   plumedArgs[1] = (char* )"plumed_zyx";
   plumedArgs[2] = (char*)"plumed";
   plumedArgs[3] = (char*)"plumedfile";
   plumedArgs[4] = (char*) arg[7];
   plumedArgs[5] = (char*)"outfile";
   plumedArgs[6] = (char*) "cv.out";  /**/
-  
+
   createPlumedObject(7, plumedArgs);
-  
+
   //FROM COMPUTE PE ATOM
   peratom_flag = 1;
   size_peratom_cols = 0;
@@ -157,6 +149,7 @@ FixMCCG::~FixMCCG()
   delete [] table_f_cv2;
   delete [] real_mols;
   delete [] fake_mols;
+  delete [] other_mols;
   delete [] v11_list;
   delete [] v12_index;
   delete [] v22_list; 
@@ -217,48 +210,36 @@ void FixMCCG::min_setup(int vflag)
 /* ---------------------------------------------------------------------- */
 void FixMCCG::post_integrate()
 {
-  //printf("post integrate!\n num molecule %d \n", atom->nmolecule);
-  //
-  //printf("compute %p", compute_pe_atom );
+
   compute_pe_atom->peatomflag = 1;
-  //compute_pe_atom->invoked_flag |= INVOKED_ARRAY;
-  //modify->addstep_compute(update->ntimestep +1);
-  /*printf("start to initialize stuff \n");
-  fflush(stdout);*/
+
+
   double **x = atom->x;
   int *mask = atom->mask;
   int *type = atom->type;
   int numlocal = atom->nlocal;
   tagint *molecule = atom->molecule;
   tagint *tag = atom->tag;
-  //printf("done  initialize stuff \n");
-  //fflush(stdout);
+
   for (int i = 0; i < numlocal; i++)
   {
-  	  int molid = molecule[i];
-  	  int atomTag = tag[i]; 
-  	  //printf("atomTag %d \n", atomTag);
-  	  f_coupling[i][0] = 0.0;
-      f_coupling[i][1] = 0.0;
-      f_coupling[i][2] = 0.0;
-      for (int j = 0; j < numlocal; j++)
-      {
-      		//printf("corresponding tag %d \n", tag[j]);
-      		if(corresponding_atom_tags[atomTag - 1] == tag[j])
-      		{
-      			//printf("atom i %d tag i %d atom j %d tag j %d \n", i, atomTag, j, tag[j]);
-      			//offset positions slightly so that vdw don't produce nan
-      			x[j][0] = x[i][0] + 0.00001;
-      			x[j][1] = x[i][1] + 0.00001;
-      			x[j][2] = x[i][2] + 0.00001;
-      		}
-      
-      }
-      //printf("pos %f %f %f\n", x[i][0], x[i][1], x[i][2]);
-  
+	  int molid = molecule[i];
+	  int atomTag = tag[i]; 
+	  //printf("atomTag %d \n", atomTag);
+	  f_coupling[i][0] = 0.0;
+    f_coupling[i][1] = 0.0;
+    f_coupling[i][2] = 0.0;
+    for (int j = 0; j < numlocal; j++)
+    {
+  		if(corresponding_atom_tags[atomTag - 1] == tag[j])
+  		{
+  			//offset positions slightly so that vdw don't produce nan
+  			x[j][0] = x[i][0] + 0.00001;
+  			x[j][1] = x[i][1] + 0.00001;
+  			x[j][2] = x[i][2] + 0.00001;
+  		} 
+    }
   }
-  //printf("done post integrate \n");
-
 }
 
 
@@ -267,30 +248,24 @@ void FixMCCG::post_integrate()
 void FixMCCG::post_force(int vflag)
 {
   //need to compute per atom energies.
-  /*printf("mccg post force\n\n\n\n\n");
-  printf("compute %p\n\n\n", compute_pe_atom );*/
   compute_pe_atom->invoked_flag |= INVOKED_ARRAY;
   modify->addstep_compute(update->ntimestep + 1);
+  
   //compute per atom energies:
-  //compute_pe_atom->compute_peratom();
   compute_peratom();
-  /*printf("compute %p\n\n\n", compute_pe_atom );
-  printf("compute per atom done");*/
+
+
   double **x = atom->x;
   double **f = atom->f;
   int *mask = atom->mask;
   //nlocal = atom->nlocal;
   tagint *molecule = atom->molecule;
   tagint *tag = atom->tag;
-  /*printf("before plumed runs\n");
-  printf("compute %p\n\n\n", compute_pe_atom );
-  fflush(stdout);*/
+
   //PLUMED STUFFS
   /*---------------------------------------------------------------------*/
   int update_gatindex = 0 ;
   if(nlocal!=atom->nlocal){
-    /*printf("in if,%d %d\n", nlocal, atom->nlocal);
-    fflush(stdout); */ 
     if(charges) {
       delete [] charges; 
     }
@@ -302,21 +277,13 @@ void FixMCCG::post_force(int vflag)
     charges=new double [nlocal];
     update_gatindex=1;
   } else {
-    //printf("in else\n");
-    //fflush(stdout);  
     for(int i=0;i<nlocal;i++){
-      /*printf("i: %d\n", i);
-      fflush(stdout); */
       if(gatindex[i]!=atom->tag[i]-1){
-        /*printf("in if if \n");
-        fflush(stdout);*/
         update_gatindex=1;
         break;
       }
     }
   }
-  //printf("in between ifs \n");
-  //printf("compute %p\n\n\n", compute_pe_atom );
   if(update_gatindex){
     for(int i=0;i<nlocal;i++){
       gatindex[i]=atom->tag[i]-1;
@@ -326,10 +293,6 @@ void FixMCCG::post_force(int vflag)
     plumed->cmd("setAtomsNlocal",&nlocal);
     plumed->cmd("setAtomsGatindex",gatindex);
   }
-  /*printf("after update gat");
-  printf("compute %p\n\n\n", compute_pe_atom );
-  fflush(stdout);  
-  */
   // set up local virial/box. plumed uses full 3x3 matrices
   double virial[3][3];
   for(int i=0;i<3;i++) for(int j=0;j<3;j++) virial[i][j]=0.0;
@@ -344,11 +307,9 @@ void FixMCCG::post_force(int vflag)
   
 // local variable with timestep:
   int step=update->ntimestep;
-  //mccg_output << "\nTimestep " << step << "\n";
   
   double energ = 0.0;
   double *potener = &energ;
-  //printf("plumed set stuff before calc");
 
 // pass all pointers to plumed:
   plumed->cmd("setStep",&step);
@@ -359,20 +320,9 @@ void FixMCCG::post_force(int vflag)
   if(atom->q) plumed->cmd("setCharges",&charges[0]);
   plumed->cmd("setVirial",&virial[0][0]);
   plumed->cmd("setEngineArgs", &cv_array[0]);
-  //printf("Virial 1 : %f\n", Fix::virial[0]);
 // do the real calculation:
-  //printf("plumed right before calc");
   plumed->cmd("setEnergy",&potener);  
   plumed->cmd("calc");
-  //mccg_output << "CV ARRAY: " << cv_array[0] << "\n";
-  //printf("plumed after calc\n");
-
-  //printf("cvAray1 %f\n", cv_array[0]);
-  //printf("cvAray2 %f\n", cv_array[1]);
-  
-  //compute_pe_atom =  (ComputePEAtom*)(modify->compute[compute_pe_ID]);
-  //printf("plumed after lost");
-  //printf("compute %p\n\n\n", compute_pe_atom );
 
 // retransform virial to lammps representation:
   Fix::virial[0]=-virial[0][0];
@@ -381,171 +331,154 @@ void FixMCCG::post_force(int vflag)
   Fix::virial[3]=-virial[0][1];
   Fix::virial[4]=-virial[0][2];
   Fix::virial[5]=-virial[1][2];
-  //printf("plumed force : %f\n", f_coupling[0][0]);
-  //printf("plumed force : %f\n", f_coupling[0][1]);
-  //printf("plumed force : %f\n", f_coupling[0][2]);
   /*---------------------------------------------------------------------*/
 
   nlocal = atom->nlocal;
-  //printf("Done plumed\n Loop through mccg mols\n");
-  //printf("compute %p\n\n\n", compute_pe_atom );
+
+  double potentialEnergy;
+  potentialEnergy = 0.0;
   for (int i = 0; i < sizeof(real_mols)/sizeof(int)-1; i++)
   {
-  		
-  		double v11, v22, v12, c1, c2, d1, d2, cv_val, discrim, norm_factor;
-  		int cv_index;
-  		v11 = getEnergy(real_mols[i]);
-  		v22 = getEnergy(fake_mols[i])+deltaFs[i];  		
-  		if (numCVs == 1)
-  		{
-  			cv_index = get_CV_index(cv_array[0]); 
-  		}
-  		if (numCVs == 2)
-  		{
-			cv_index = get_CV_index(cv_array[0], cv_array[1]);
-      //mccg_output << "CV INDEX: " << cv_index << "\n";
-  		}
-  		
-  		
-  		
-  		v12 = table_v12[cv_index];
+		
+		double v11, v22, v12, c1, c2, d1, d2, cv_val, discrim, norm_factor;
+		int cv_index;
 
-      if(fabs(v12) < 0.00001){
-        if(v11 > v22){
-		      d1 = 0;
-		      d2 = 1;
-	      }
-        else{
-          d1 = 1;
-          d2 = 0;
-        }
-        //mccg_output << "v12 is small!\n"; 
+    //Get PE for both states
+		v11 = getEnergy(real_mols[i]);
+		v22 = getEnergy(fake_mols[i])+deltaFs[i];
+
+		if (numCVs == 1)
+		{
+			cv_index = get_CV_index(cv_array[0]); 
+		}
+		if (numCVs == 2)
+		{
+		  cv_index = get_CV_index(cv_array[0], cv_array[1]);
+		}
+		
+		
+		
+		v12 = table_v12[cv_index];
+
+    // Do not bother doing calculation if coupling is ~ zero
+    if(fabs(v12) < 0.00001){
+      if(v11 > v22){
+	      d1 = 0;
+	      d2 = 1;
       }
       else{
-        double trace = v11+v22;
-        double determ = (v11*v22) - (v12*v12);
-        discrim = (pow(trace,2) / 4.0) - determ;
-        //mccg_output << "discrim: " << discrim << " determ " << determ << " trace " << trace << "\n";
-        //printf("Discriminant %f v11 %f v22 %f v12 %f \n", discrim, v11, v22, v12);
-        d1 = (trace / 2.0) - sqrt(discrim) - v22;
-        d2 = v12;
-
+        d1 = 1;
+        d2 = 0;
       }
-      
-  		
-  		// Calculate Eigenvector for 2x2 matrix for lower E'val
+    }
+    else{
+      // Calculate E'val and E'vector
+      double trace = v11+v22;
+      double determ = (v11*v22) - (v12*v12);
+      discrim = (pow(trace,2) / 4.0) - determ;
+      d1 = (trace / 2.0) - sqrt(discrim) - v22;
+      d2 = v12;
 
-  		norm_factor = sqrt(pow(d1,2) + pow(d2,2));
-      //mccg_output << "d1 " << d1 << " d2 " << d2 << " norm_factor " << norm_factor  << "\n";
-  		c1 = d1 / norm_factor;
-  		c2 = d2 / norm_factor;
-  		
-  		v11_list[i] = v11;
-  		v12_index[i] = cv_index;
-  		v22_list[i] = v22;
-  		
-  		e_vector1[i] = c1;
-  		e_vector2[i] = c2;
-  		
-  		
-  		double discr = pow(v12,2) + pow((v11 - v22)/2, 2 );
-  		e_value[i] = 0.5 * (v11+v22) - sqrt(discr);
-  		//printf("interation %d through mccg mols\nd1 %f d2 %f c1 %f c2 %f eval %f\n", i, d1, d2, c1, c2, e_value[i]);
-      //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
-      if(step%outputFreq == 0) mccg_output << step << "  " << v11 << "  " << v22 << "  " << v12 <<  "  " << c1 << "  " << c2 << "  " <<  e_value[i] << " " << cv_array[0] << " " << cv_array[1] << "\n";
+    }
+    
+		
+		// Normalize E'vectors and store values
+
+		norm_factor = sqrt(pow(d1,2) + pow(d2,2));
+		c1 = d1 / norm_factor;
+		c2 = d2 / norm_factor;
+		
+		v11_list[i] = v11;
+		v12_index[i] = cv_index;
+		v22_list[i] = v22;
+		
+		e_vector1[i] = c1;
+		e_vector2[i] = c2;
+		
+		
+		double discr = pow(v12,2) + pow((v11 - v22)/2, 2 );
+		e_value[i] = 0.5 * (v11+v22) - sqrt(discr);
+    potentialEnergy += e_value[i];
+		//printf("interation %d through mccg mols\nd1 %f d2 %f c1 %f c2 %f eval %f\n", i, d1, d2, c1, c2, e_value[i]);
+    //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
+    if(step%outputFreq == 0) mccg_output << step << "  " << v11 << "  " << v22 << "  " << v12 <<  "  " << c1 << "  " << c2 << "  " <<  e_value[i] << " " << cv_array[0] << " " << cv_array[1] << "\n";
   }
-  //printf("Loop through atoms to change forces\n");
-  //printf("compute %p\n\n\n", compute_pe_atom );
   //calculate hellman-feyman forces for 2x2
   for (int i = 0; i < nlocal; i++)
   {
-  		//printf("atom %d\n", i);
-  	 	fflush(stdout);
-  	    if ((mask[i] & groupbit) && (corresponding_atom_tags[tag[i]-1] != -1))
-  	    {
-  	    	//printf("corresponding atoms \n");
-  	    	fflush(stdout);
-  	   		int molind = (molecule[i] - 1) / 2;
-  	   		//printf("molecule \n");
-  	    	fflush(stdout);
-  	   	    //printf("compute pe atom %f \n", energy[i]);
-  	    	fflush(stdout);
-  	   		int v12_ind;
-  	   		double v11, v22, c1, c2;
-  	   		
-  	   		//printf("interation %d through atoms\n molid %d tag %d corr %d\n", i, molind, tag[i], corresponding_atom_tags[tag[i] - 1]);
-  	   
-  	   		v11 = v11_list[molind];
-  	   		v12_ind = v12_index[molind];
-  	   		v22 = v22_list[molind];
-  	   
-  	   		c1 = e_vector1[molind];
-  	   		c2 = e_vector2[molind];
-  	   		//printf("v11 %f v12 %f v22 %f c1 %f  c2 %f\n", v11, table_v12[v12_ind], v22, c1, c2);
-  	   		
-  			//find other atom
-  			int corr_ind;
-  			for (int j = 0; j < nlocal; j++){
-  				//printf("tag %d, \n", tag[j]);
-  				if(corresponding_atom_tags[tag[i] - 1] == tag[j])
-  				{ 
-  					//printf("corr_ind %d\n", j);
-  					corr_ind = j;
-  				}
+    if ((mask[i] & groupbit) && (corresponding_atom_tags[tag[i]-1] != -1))
+    {
+   		int molind = (molecule[i] - 1) / 2;
+
+   		int v12_ind;
+   		double v11, v22, c1, c2;
+
+      // READ MATRIX ELEMENTS FROM ARRAYS
+   		  	   
+   		v11 = v11_list[molind];
+   		v12_ind = v12_index[molind];
+   		v22 = v22_list[molind];
+   
+   		c1 = e_vector1[molind];
+   		c2 = e_vector2[molind];
+   		
+  		//find other atom
+  		int corr_ind;
+  		for (int j = 0; j < nlocal; j++)
+      {
+  			if(corresponding_atom_tags[tag[i] - 1] == tag[j])
+  			{ 
+  				corr_ind = j;
   			}
-  			
-  			double dv12_1, dv12_2, dv12;
-  			if(numCVs == 1){
-  				dv12 = table_f_cv1[v12_ind];
-  			}
+		  }
+		
+      //GET FORCES ON COUPLING TERM FROM TABLE
+  		double dv12_1, dv12_2, dv12;
+  		if(numCVs == 1){
+  			dv12 = table_f_cv1[v12_ind];
+  		}
+  		else if(numCVs == 2){
+  			dv12_1 = table_f_cv1[v12_ind];
+  			dv12_2 = table_f_cv2[v12_ind];
+  		}
+  		
+   		// LOOP THROUGH X,Y,Z COORDINATES
+   		for (int j = 0; j < 3; j++)
+   		{
+
+   			double term1, term2, term3;
+   			 
+      	double dTot, dv12_1, dcvdq_1, dv12_2, dcvdq_2, dv12, dcvdq;
+      	if(numCVs == 1){
+      		dcvdq = f_coupling[i][j];
+      		dTot = dv12*dcvdq;
+      	}
   			else if(numCVs == 2){
-  				dv12_1 = table_f_cv1[v12_ind];
-  				dv12_2 = table_f_cv2[v12_ind];
-  			}
-  			
-  			
-  			//if(step%outputFreq == 0) mccg_output << "atom: " << tag[i] << " v12 index: " << v12_ind << " dv12 " << dv12_1 << "  " << dv12_2 << "\n";
-  	   		//if(step%outputFreq == 0) mccg_output << "pos force1 force2  dcvdq1 dcvdq2\n";
-  	   		
-  	   		for (int j = 0; j < 3; j++)
-  	   		{
-  	   		
-  	   		
-  	   			//printf("x y z\n");
-  	   			double term1, term2, term3;
-  	   			 
-            	double dTot, dv12_1, dcvdq_1, dv12_2, dcvdq_2, dv12, dcvdq;
-            	if(numCVs == 1){
-             	 	//dv12 = table_f_cv1[v12_ind];
-              		dcvdq = f_coupling[i][j];
-              		dTot = dv12*dcvdq;
-            	}
-				else if(numCVs == 2){
-				   	//dv12_1 = table_f_cv1[v12_ind];
-				   	dcvdq_1 = f_coupling[i][j];
-				   	//dv12_2 = table_f_cv2[v12_ind];
-				   	dcvdq_2 = f_coupling[corr_ind][j];
-				  	dTot = (dv12_1*dcvdq_1) + (dv12_2*dcvdq_2);
-				} 
-  	   			//printf("force %f force \n", f[i][j]);
-  	   			term1 = pow(c1, 2)*f[i][j];
-  	   			term2 = pow(c2, 2)*f[corr_ind][j];
-  	   			term3 = 2*c1*c2*dTot;
-  	   			double totForce = term1 + term2 + (2*term3);
- 
-  	   			f[i][j] = totForce;
-  	   			f[corr_ind][j] = totForce;
-  	   			//if(step%outputFreq == 0) mccg_output << x[i][j] << " " << f[i][j] << " " << f[corr_ind][j] << " "  <<  dcvdq_1 << "  " << dcvdq_2 << " " << tempf <<  "\n";
-  	   			//printf("term 1 %f term2 %f term3 %f dtot %f\n",term1, term2, term3, dTot);
-  	   			//printf("position %f\n", x[i][j]);
-  	   			//printf("plumed force : %f\n", f_coupling[i][j]);
-  	   		}
-  	   
-  	   }
-  
+  		   	dcvdq_1 = f_coupling[i][j];
+  		   	dcvdq_2 = f_coupling[corr_ind][j];
+  		  	dTot = (dv12_1*dcvdq_1) + (dv12_2*dcvdq_2);
+  			} 
+   			term1 = pow(c1, 2)*f[i][j];
+   			term2 = pow(c2, 2)*f[corr_ind][j];
+   			term3 = 2*c1*c2*dTot;
+   			double totForce = term1 + term2 + (2*term3);
+
+   			f[i][j] = totForce;
+   			f[corr_ind][j] = totForce;
+   		} 
+	  }
   }
-    //printf("compute %p\n\n\n", compute_pe_atom );
-    //fflush(stdout);
+  if(step%outputFreq == 0) 
+  {
+    int nMols = (sizeof(other_mols)/sizeof(*other_mols));
+    for(int i = 0; i < nMols; i ++){
+      if(other_mols[i] == 1){
+        potentialEnergy += getEnergy(i+1);
+      }
+    }
+    printf("MCCG: PotentialEnergy %f\n",potentialEnergy);
+  }
+
 }
 
 void FixMCCG::min_post_force(int vflag)
@@ -775,25 +708,27 @@ void FixMCCG::readRealMols(char * file)
 	fnp = fopen(file, "r");
 	fgets(line,MAXLINE,fnp); // comment
 	fgets(line,MAXLINE,fnp);
-	int numMols;
-	sscanf(line,"NUM %i",&numMols);
-	printf("\nNum MOls %d\n", numMols);
+	int mccgMols;
+  int regMols;
+	sscanf(line,"NUM %i OTHER %i",&mccgMols, &regMols);
+	printf("\nNum MOls %d\n", mccgMols);
 	
 	
 	//int numMols = 1;
-	memory->create(real_mols,   numMols, "mccg:real_mols");
-	memory->create(fake_mols,   numMols, "mccg:fake_mols");
-	memory->create(num_mccg_atoms,   numMols, "mccg:num_mccg_atoms");
-	memory->create(v11_list,   	numMols, "mccg:v11_list");
-	memory->create(v22_list,   	numMols, "mccg:v22_list");
-	memory->create(v12_index,   numMols, "mccg:v12_list");
-	memory->create(e_vector1, 	numMols, "mccg:e_vector1");
-	memory->create(e_vector2, 	numMols, "mccg:e_vector2");
-	memory->create(e_value, 	numMols, "mccg:e_value");
+	memory->create(real_mols,   mccgMols, "mccg:real_mols");
+	memory->create(fake_mols,   mccgMols, "mccg:fake_mols");
+  memory->create(other_mols,  mccgMols*2 + regMols, "mccg:other_mols");
+	memory->create(num_mccg_atoms,   mccgMols, "mccg:num_mccg_atoms");
+	memory->create(v11_list,   	mccgMols, "mccg:v11_list");
+	memory->create(v22_list,   	mccgMols, "mccg:v22_list");
+	memory->create(v12_index,   mccgMols, "mccg:v12_list");
+	memory->create(e_vector1, 	mccgMols, "mccg:e_vector1");
+	memory->create(e_vector2, 	mccgMols, "mccg:e_vector2");
+	memory->create(e_value, 	mccgMols, "mccg:e_value");
 	memory->create(corresponding_atom_tags,(atom->natoms), "mccg:corresponding_atom_tags");
 	memory->create(energy, (atom->natoms), "mccg:energy" );
 	memory->create(f_coupling, (atom->natoms), 3, "mccg:f_coupling");
-  memory->create(deltaFs, numMols, "mccg:deltaFs");
+  memory->create(deltaFs, mccgMols, "mccg:deltaFs");
 	
 	
 	for(int i = 0; i < atom->natoms; i++ ){
@@ -802,32 +737,43 @@ void FixMCCG::readRealMols(char * file)
 	
 	printf("Done allocating\n");
 
-    for(int i=0; i<numMols; i++) 
-    {
-    	printf("loop");
-     	fgets(line,MAXLINE,fnp);
-     	//fake_mols[i] = 2;
-     	//real_mols[i] = 1;
-     	//num_mccg_atoms = 1;
-     	//int mccg_atoms;
-    	sscanf(line,"MOL %d %d %d %lg", &real_mols[i], &fake_mols[i], &num_mccg_atoms[i], &deltaFs[i]);
-    	for (int j=0; j< num_mccg_atoms[i]; j++)
-    	{
-    		fgets(line,MAXLINE,fnp);
-    		int a, b;
-    		sscanf(line,"%d %d", &a, &b);
-    		//only need to add corr atoms once to prevent double evaluation.
-    		if (b > a) corresponding_atom_tags[a-1] = b;
-    		//corresponding_atom_tags[a-1] = b;
-    		//corresponding_atom_tags[b-1] = a;
-    	}
-    }
-    printf("done read\n print ids\n");
-    for (int i=0; i<atom->natoms; i++) 
-    {
-    	printf("%d %d\n", i , corresponding_atom_tags[i]);
-    }
+  for(int i=0; i<mccgMols; i++) 
+  {
+  	printf("loop");
+   	fgets(line,MAXLINE,fnp);
+   	//fake_mols[i] = 2;
+   	//real_mols[i] = 1;
+   	//num_mccg_atoms = 1;
+   	//int mccg_atoms;
+  	sscanf(line,"MOL %d %d %d %lg", &real_mols[i], &fake_mols[i], &num_mccg_atoms[i], &deltaFs[i]);
+  	for (int j=0; j< num_mccg_atoms[i]; j++)
+  	{
+  		fgets(line,MAXLINE,fnp);
+  		int a, b;
+  		sscanf(line,"%d %d", &a, &b);
+  		//only need to add corr atoms once to prevent double evaluation.
+  		if (b > a) corresponding_atom_tags[a-1] = b;
+  		//corresponding_atom_tags[a-1] = b;
+  		//corresponding_atom_tags[b-1] = a;
+  	}
+  }
+  printf("done read\n print ids\n");
+  for (int i=0; i<atom->natoms; i++) 
+  {
+  	printf("%d %d\n", i , corresponding_atom_tags[i]);
+  }
 
+  int nMols = (sizeof(other_mols)/sizeof(*other_mols));
+  for (int i=0; i<nMols; i++)
+  {
+    other_mols[i] = 1;
+    for (int j=0; j<mccgMols; j++){
+      if(i + 1 = real_mols[j] || i + 1 = fake_mols[j])
+      {
+        other_mols[i] = 0;
+      }
+    }
+  }
 
 }
 
