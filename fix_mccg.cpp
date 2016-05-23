@@ -84,7 +84,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
     }
   else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq outFile");
 
-  mccg_output.open (sscanf(arg[9]));
+  mccg_output.open (arg[9]);
   mccg_output << "#Timestep         V11          V22          V12        Evec1        Evec2         Eval\n";
   sscanf(arg[8], "%d", &outputFreq);
 
