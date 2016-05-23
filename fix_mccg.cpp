@@ -70,9 +70,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   charges(NULL)
 {
   printf("Hello world MCCG\n");
-  mccg_output.open ("mccg.out");
-  mccg_output << "#Timestep         V11          V22          V12        Evec1        Evec2         Eval\n";
-  if (narg < 9) error->all(FLERR,"Illegal fix mccg command");
+  if (narg < 10) error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq outFile");
     
 
     if (strstr(arg[4], "ncvs") == arg[4])
@@ -84,7 +82,10 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
     		//printf("NumCVs %d \n", numCVs);
     		std::cout << numCVs << std::endl;
     }
-  else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq");
+  else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq outFile");
+
+  mccg_output.open (sscanf(arg[9]));
+  mccg_output << "#Timestep         V11          V22          V12        Evec1        Evec2         Eval\n";
   sscanf(arg[8], "%d", &outputFreq);
 
   char **computeArgs = new char*[3];
@@ -101,7 +102,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
 
   modify->add_compute(3,newarg);
   fflush(stdout);  
-  compute_pe_ID = modify->find_compute(newarg[0]);
+  compute_pe_ID = modify->find_compute(newarg[0]); 
   printf("compute id %d\n", compute_pe_ID);
   delete [] newarg;
   delete [] computeArgs;
