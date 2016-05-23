@@ -85,7 +85,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq outFile");
 
   mccg_output.open (arg[9]);
-  mccg_output << "#Timestep         V11          V22          V12        Evec1        Evec2         Eval\n";
+  mccg_output << "#Timestep         V11          V22          V12        Evec1        Evec2         Eval          CV1          CV2\n";
   sscanf(arg[8], "%d", &outputFreq);
 
   char **computeArgs = new char*[3];
@@ -404,8 +404,8 @@ void FixMCCG::post_force(int vflag)
     //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
     if(step%outputFreq == 0)
     {
-      char outString[84];
-      sprintf(outString, "%8d %12.4f %12.4f %12.4f %12.4f %12.4f %12.4f \n", step, v11, v22, v12, c1, c2, e_value[i]);
+      char outString[150];
+      sprintf(outString, "%8d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, v11, v22, v12, c1, c2, e_value[i], cv_array[0], cv_array[1]);
       mccg_output << outString;
       //mccg_output << step << "\t" << v11 << "\t" << v22 << "\t" << v12 <<  "\t" << c1 << "\t" << c2 << "\t" <<  e_value[i] << "\n";
     }
