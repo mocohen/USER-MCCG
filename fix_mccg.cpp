@@ -85,7 +85,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq outFile");
 
   mccg_output.open (arg[9]);
-  mccg_output << "#Timestep         V11          V22          V12        Evec1        Evec2         Eval          CV1          CV2\n";
+  mccg_output << "#Timestep V11       V22        V12      Evec1      Evec2       Eval        CV1        CV2\n";
   sscanf(arg[8], "%d", &outputFreq);
 
   char **computeArgs = new char*[3];
@@ -495,12 +495,24 @@ void FixMCCG::min_post_force(int vflag)
 
 int FixMCCG::get_CV_index(double cv1_val)
 {
-	return (cv1_val - cv1_min) / cv1_delta;
+  if (cv1_val < cv1_min || cv1_val > cv1_max) {
+    error->all(FLERR,"CV1 is outside min/max");
+  }
+  else{
+    return (cv1_val - cv1_min) / cv1_delta;
+  }
 }
 
 int FixMCCG::get_CV_index(double cv1_val, double cv2_val)
 {
 	int cv1_index, cv2_index;
+  if (cv1_val < cv1_min || cv1_val > cv1_max) {
+    error->all(FLERR,"CV1 is outside min/max");
+  }
+  else if(cv2_val < cv2_min || cv2_val > cv2_max){
+    error->all(FLERR,"CV2 is outside min/max");
+  }
+
 	cv1_index = (cv1_val - cv1_min) / cv1_delta;
 	cv2_index = (cv2_val - cv2_min) / cv2_delta;
 	
