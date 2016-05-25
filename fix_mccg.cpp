@@ -407,7 +407,7 @@ void FixMCCG::post_force(int vflag)
       char outString[150];
       sprintf(outString, "%8d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, v11, v22, v12, c1, c2, e_value[i], cv_array[0], cv_array[1]);
       mccg_output << outString;
-      fflush(mccg_output);
+      fsync(mccg_output);
       //mccg_output << step << "\t" << v11 << "\t" << v22 << "\t" << v12 <<  "\t" << c1 << "\t" << c2 << "\t" <<  e_value[i] << "\n";
     }
   }
