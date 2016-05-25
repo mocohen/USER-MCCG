@@ -407,6 +407,7 @@ void FixMCCG::post_force(int vflag)
       char outString[150];
       sprintf(outString, "%8d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, v11, v22, v12, c1, c2, e_value[i], cv_array[0], cv_array[1]);
       mccg_output << outString;
+      fflush(mccg_output);
       //mccg_output << step << "\t" << v11 << "\t" << v22 << "\t" << v12 <<  "\t" << c1 << "\t" << c2 << "\t" <<  e_value[i] << "\n";
     }
   }
@@ -495,22 +496,36 @@ void FixMCCG::min_post_force(int vflag)
 
 int FixMCCG::get_CV_index(double cv1_val)
 {
-  if (cv1_val < cv1_min || cv1_val > cv1_max) {
-    error->all(FLERR,"CV1 is outside min/max");
+  if (cv1_val < cv1_min){
+    mccg_output << "WARNING: CV1 is less than CV1_min";
+    cv1_val = cv1_min;
+  } 
+  else if(cv1_val > cv1_max) {
+    mccg_output << "WARNING: CV1 is greater than CV1_min";
+    cv1_val = cv1_max;
   }
-  else{
-    return (cv1_val - cv1_min) / cv1_delta;
-  }
+  return (cv1_val - cv1_min) / cv1_delta;
 }
 
 int FixMCCG::get_CV_index(double cv1_val, double cv2_val)
 {
 	int cv1_index, cv2_index;
-  if (cv1_val < cv1_min || cv1_val > cv1_max) {
-    error->all(FLERR,"CV1 is outside min/max");
+  if (cv1_val < cv1_min){
+    mccg_output << "WARNING: CV1 is less than CV1_min";
+    cv1_val = cv1_min;
+  } 
+  else if(cv1_val > cv1_max) {
+    mccg_output << "WARNING: CV1 is greater than CV1_min";
+    cv1_val = cv1_max;
   }
-  else if(cv2_val < cv2_min || cv2_val > cv2_max){
-    error->all(FLERR,"CV2 is outside min/max");
+
+  if (cv2_val < cv2_min){
+    mccg_output << "WARNING: CV2 is less than CV2_min";
+    cv2_val = cv2_min;
+  } 
+  else if(cv2_val > cv2_max) {
+    mccg_output << "WARNING: CV2 is greater than CV2_min";
+    cv2_val = cv2_max;
   }
 
 	cv1_index = (cv1_val - cv1_min) / cv1_delta;
