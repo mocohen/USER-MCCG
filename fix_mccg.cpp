@@ -497,11 +497,11 @@ void FixMCCG::min_post_force(int vflag)
 int FixMCCG::get_CV_index(double cv1_val)
 {
   if (cv1_val < cv1_min){
-    mccg_output << "WARNING: CV1 is less than CV1_min";
+    mccg_output << "WARNING: CV1 is less than CV1_min\n";
     cv1_val = cv1_min;
   } 
   else if(cv1_val > cv1_max) {
-    mccg_output << "WARNING: CV1 is greater than CV1_min";
+    mccg_output << "WARNING: CV1 is greater than CV1_min\n";
     cv1_val = cv1_max;
   }
   return (cv1_val - cv1_min) / cv1_delta;
@@ -511,20 +511,20 @@ int FixMCCG::get_CV_index(double cv1_val, double cv2_val)
 {
 	int cv1_index, cv2_index;
   if (cv1_val < cv1_min){
-    mccg_output << "WARNING: CV1 is less than CV1_min";
+    mccg_output << "WARNING: CV1 is less than CV1_min\n";
     cv1_val = cv1_min;
   } 
   else if(cv1_val > cv1_max) {
-    mccg_output << "WARNING: CV1 is greater than CV1_min";
+    mccg_output << "WARNING: CV1 is greater than CV1_min\n";
     cv1_val = cv1_max;
   }
 
   if (cv2_val < cv2_min){
-    mccg_output << "WARNING: CV2 is less than CV2_min";
+    mccg_output << "WARNING: CV2 is less than CV2_min\n";
     cv2_val = cv2_min;
   } 
   else if(cv2_val > cv2_max) {
-    mccg_output << "WARNING: CV2 is greater than CV2_min";
+    mccg_output << "WARNING: CV2 is greater than CV2_min\n";
     cv2_val = cv2_max;
   }
 
