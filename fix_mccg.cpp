@@ -820,30 +820,30 @@ void FixMCCG::readControlFile(char * file)
     char * inputArg = NULL;
     char * inputParam = NULL;
     sscanf(line, "%s %s", &inputArg, &inputParam);
-    printf("Read line\n");
+    printf("Read line %s\n", line);
 
 
-    if(strcmp(inputArg, "couplingTable") == 0){
+    if(strcmp(inputArg, "couplingTable") == 0) {
       printf("Read couplingTable\n");
       sscanf(inputParam, "%s", &couplingTableFile);
 
     }
-    else if(strcmp(inputArg, "numberCvs") == 0){
+    else if(strcmp(inputArg, "numberCvs") == 0) {
       printf("Read numberCvs\n");
       sscanf(inputParam, "%d", &numCVs);
 
     }
-    else if(strcmp(inputArg, "correspondingMoleculesInput") == 0){
+    else if(strcmp(inputArg, "correspondingMoleculesInput") == 0) {
       printf("Read correspondingMoleculesInput\n");
       sscanf(inputParam, "%s", &correspondMolsFile);
 
     }
-    else if(strcmp(inputArg, "plumedInput") == 0){
+    else if(strcmp(inputArg, "plumedInput") == 0) {
       printf("Read plumedInput\n");
       sscanf(inputParam, "%s", &plumedFile);
 
     }    
-    else if(strcmp(inputArg, "outputFile") == 0){
+    else if(strcmp(inputArg, "outputFile") == 0) {
       printf("Read outputFile\n");
       sscanf(inputParam, "%s", &outFile);
 
@@ -854,35 +854,35 @@ void FixMCCG::readControlFile(char * file)
   if (line) {
     free(line);
   }
-  if(numCVs != 1 || numCVs != 2) {
+  if (numCVs != 1 || numCVs != 2) {
     error->all(FLERR,"MCCG Error: Error reading input. numCVs should be 1 or 2\n");
   }
 
-  if(outFile != NULL){
+  if (outFile != NULL){
     mccg_output.open (outFile);
     mccg_output << "#Timestep V11       V22        V12      Evec1      Evec2       Eval        CV1        CV2\n";
   }
-  else{
+  else {
     error->all(FLERR,"MCCG Error: Error reading input. Please specify *outputFile* in control file\n");
   }
 
-  if(couplingTableFile != NULL){
+  if (couplingTableFile != NULL) {
     readCouplingTable(couplingTableFile);    
   }
-  else{
+  else {
     error->all(FLERR,"MCCG Error: Error reading input. Please specify *couplingTable* in control file\n");
   }
-  if(correspondMolsFile != NULL){
+  if (correspondMolsFile != NULL) {
     readRealMols(correspondMolsFile);    
   }
-  else{
+  else {
     error->all(FLERR,"MCCG Error: Error reading input. Please specify *correspondingMoleculesInput* in control file\n");
   }
 
   
   post_integrate();
 
-  if(plumedFile != NULL){
+  if (plumedFile != NULL) {
 
     // CREATE PLUMED OBJECT
     char **plumedArgs = new char*[7];
@@ -896,7 +896,7 @@ void FixMCCG::readControlFile(char * file)
     createPlumedObject(7, plumedArgs);
    
   }
-  else{
+  else {
     error->all(FLERR,"MCCG Error: Error reading input. Please specify *correspondingMoleculesInput* in control file\n");
   }  
 
