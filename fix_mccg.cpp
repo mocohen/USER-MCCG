@@ -823,14 +823,17 @@ void FixMCCG::readControlFile(char * file)
 
 
     if(strcmp(inputArg, "couplingTable") == 0){
+      printf("Read line\n");
       sscanf(inputParam, "%s", &couplingTableFile);
 
     }
     else if(strcmp(inputArg, "numberCvs") == 0){
+      printf("Read line\n");
       sscanf(inputParam, "%d", &numCVs);
 
     }
     else if(strcmp(inputArg, "correspondingMoleculesInput") == 0){
+      printf("Read line\n");
       sscanf(inputParam, "%s", &correspondMolsFile);
 
     }
@@ -839,6 +842,7 @@ void FixMCCG::readControlFile(char * file)
 
     }    
     else if(strcmp(inputArg, "outputFile") == 0){
+      sscanf(inputParam, "%s", &outFile);
 
     }
 
