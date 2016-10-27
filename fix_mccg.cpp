@@ -69,6 +69,7 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   masses(NULL),
   charges(NULL)
 {
+  setbuf(stdout, NULL);
   printf("Hello world MCCG\n");
   if (narg < 5) error->all(FLERR,"Illegal fix mccg command - fix name mccg controlFile outputFreq");
   
@@ -823,25 +824,27 @@ void FixMCCG::readControlFile(char * file)
 
 
     if(strcmp(inputArg, "couplingTable") == 0){
-      printf("Read line\n");
+      printf("Read couplingTable\n");
       sscanf(inputParam, "%s", &couplingTableFile);
 
     }
     else if(strcmp(inputArg, "numberCvs") == 0){
-      printf("Read line\n");
+      printf("Read numberCvs\n");
       sscanf(inputParam, "%d", &numCVs);
 
     }
     else if(strcmp(inputArg, "correspondingMoleculesInput") == 0){
-      printf("Read line\n");
+      printf("Read correspondingMoleculesInput\n");
       sscanf(inputParam, "%s", &correspondMolsFile);
 
     }
     else if(strcmp(inputArg, "plumedInput") == 0){
+      printf("Read plumedInput\n");
       sscanf(inputParam, "%s", &plumedFile);
 
     }    
     else if(strcmp(inputArg, "outputFile") == 0){
+      printf("Read outputFile\n");
       sscanf(inputParam, "%s", &outFile);
 
     }
