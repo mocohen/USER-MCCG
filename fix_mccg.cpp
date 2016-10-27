@@ -792,6 +792,8 @@ void FixMCCG::readRealMols(char * file)
 
 void FixMCCG::readControlFile(char * file)
 {
+  printf("Read Control FIle\n");
+
 
   FILE * fp;
   char * line = NULL;
@@ -811,11 +813,13 @@ void FixMCCG::readControlFile(char * file)
   numCVs = 0;
 
 
+  printf("Start reading file\n");
 
   while ((read = getline(&line, &len, fp)) != -1) {
     char * inputArg = NULL;
     char * inputParam = NULL;
     sscanf(line, "%s %s", &inputArg, &inputParam);
+    printf("Read line\n");
 
 
     if(strcmp(inputArg, "couplingTable") == 0){
