@@ -820,11 +820,12 @@ void FixMCCG::readControlFile(char * file)
     char * inputArg = NULL;
     char * inputParam = NULL;
     sscanf(line, "%s %s", &inputArg, &inputParam);
-    printf("Read line %s\n", line);
+    printf("Read line %s, inputArg %s\n", line, inputArg);
 
 
     if(strcmp(inputArg, "couplingTable") == 0) {
       printf("Read couplingTable\n");
+      flush(stdout);
       sscanf(inputParam, "%s", &couplingTableFile);
 
     }
