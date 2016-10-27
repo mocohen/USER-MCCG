@@ -36,6 +36,7 @@ class FixMCCG : public Fix {
   void post_force(int);
   void min_post_force(int);
   void post_integrate();
+  void readControlFile(char * file);
   void readCouplingTable(char * file);
   void compute_peratom();
   void createPlumedObject(int narg, char **arg);

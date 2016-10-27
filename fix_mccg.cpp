@@ -70,23 +70,10 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   charges(NULL)
 {
   printf("Hello world MCCG\n");
-  if (narg < 10) error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq outFile");
-    
-
-    if (strstr(arg[4], "ncvs") == arg[4])
-    {
-    		//int i;
-    		sscanf(arg[5], "%d", &numCVs);
-    		//printf("%d", i);
-    		//numCVs = *(int *)arg[5];
-    		//printf("NumCVs %d \n", numCVs);
-    		std::cout << numCVs << std::endl;
-    }
-  else error->all(FLERR,"Illegal fix mccg command - fix name mccg v12File ncvs #numCVs mccgParamFile cvFile outputFreq outFile");
-
-  mccg_output.open (arg[9]);
-  mccg_output << "#Timestep V11       V22        V12      Evec1      Evec2       Eval        CV1        CV2\n";
-  sscanf(arg[8], "%d", &outputFreq);
+  char 
+  if (narg < 5) error->all(FLERR,"Illegal fix mccg command - fix name mccg controlFile outputFreq");
+  
+  sscanf(arg[4], "%d", &outputFreq);
 
   char **computeArgs = new char*[3];
   computeArgs[0] = (char *) "pe_comp_zyx";
@@ -110,22 +97,10 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   compute_pe_atom =  (ComputePEAtom*)(modify->compute[compute_pe_ID]);
   compute_pe_atom->peatomflag = 1;
 
-  //READ IN INFORMATION FOR MCCG
-  readCouplingTable(arg[3]);
-  readRealMols(arg[6]);
-  printf("finished reading mccg input files - data table and corresponding molecules table\n");
-  post_integrate();
 
-  // CREATE PLUMED OBJECT
-  char **plumedArgs = new char*[7];
-  plumedArgs[1] = (char* )"plumed_zyx";
-  plumedArgs[2] = (char*)"plumed";
-  plumedArgs[3] = (char*)"plumedfile";
-  plumedArgs[4] = (char*) arg[7];
-  plumedArgs[5] = (char*)"outfile";
-  plumedArgs[6] = (char*) "cv.out";  /**/
+  readControlFile(arg[3]);
 
-  createPlumedObject(7, plumedArgs);
+
 
   //FROM COMPUTE PE ATOM
   peratom_flag = 1;
@@ -145,21 +120,26 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
 FixMCCG::~FixMCCG()
 {
   mccg_output.close();
+  delete [] cv_array;
   delete [] table_v12;
   delete [] table_f_cv1;
   delete [] table_f_cv2;
   delete [] real_mols;
   delete [] fake_mols;
   delete [] other_mols;
+  delete [] corresponding_atom_tags;
+  delete [] num_mccg_atoms;
   delete [] v11_list;
-  delete [] v12_index;
   delete [] v22_list; 
+  delete [] v12_index;
   delete [] e_vector1;
   delete [] e_vector2;
   delete [] e_value;
+  delete [] deltaFs;
+  delete [] f_coupling;
   //delete compute_pe_atom;
   delete [] energy;
-  //delete plumed;
+  delete plumed;
   //delete [] xstr;
   //delete [] ystr;
   //delete [] zstr;
@@ -811,6 +791,109 @@ void FixMCCG::readRealMols(char * file)
 
 }
 
+void FixMCCG::readControlFile(char * file)
+{
+
+  FILE * fp;
+  char * line = NULL;
+  size_t len = 0;
+  ssize_t read;
+
+  fp = fopen(file, "r");
+  if (fp == NULL)
+  {
+    error->all(FLERR,"Error reading mccg input file\n");
+  }
+
+  char * couplingTableFile = NULL;
+  char * correspondMolsFile = NULL;
+  char * plumedFile = NULL;
+  char * outFile = NULL;
+  numCVs = 0;
+
+
+
+  while ((read = getline(&line, &len, fp)) != -1) {
+    char * inputArg = NULL;
+    char * inputParam = NULL;
+    sscanf(line, "%s %s", &inputArg, &inputParam)
+
+
+    if(strcmp(inputArg, "couplingTable") == 0){
+      sscanf(inputParam, "%s", &couplingTableFile);
+
+    }
+    else if(strcmp(inputArg, "numberCvs") == 0){
+      sscanf(inputParam, "%d", &numCVs);
+
+    }
+    else if(strcmp(inputArg, "correspondingMoleculesInput") == 0){
+      sscanf(inputParam, "%s", &correspondMolsFile);
+
+    }
+    else if(strcmp(inputArg, "plumedInput") == 0){
+      sscanf(inputParam, "%s", &plumedFile);
+
+    }    
+    else if(strcmp(inputArg, "outputFile") == 0){
+
+    }
+
+  }
+  fclose(fp);
+  if (line) {
+    free(line);
+  }
+  if(numCVs != 1 || numCVs != 2) {
+    error->all(FLERR,"MCCG Error: Error reading input. numCVs should be 1 or 2\n");
+  }
+
+  if(outFile != NULL){
+    mccg_output.open (outFile);
+    mccg_output << "#Timestep V11       V22        V12      Evec1      Evec2       Eval        CV1        CV2\n";
+  }
+  else{
+    error->all(FLERR,"MCCG Error: Error reading input. Please specify *outputFile* in control file\n");
+  }
+
+  if(couplingTableFile != NULL){
+    readCouplingTable(couplingTableFile);    
+  }
+  else{
+    error->all(FLERR,"MCCG Error: Error reading input. Please specify *couplingTable* in control file\n");
+  }
+  if(correspondMolsFile != NULL){
+    readRealMols(correspondMolsFile);    
+  }
+  else{
+    error->all(FLERR,"MCCG Error: Error reading input. Please specify *correspondingMoleculesInput* in control file\n");
+  }
+
+  
+  post_integrate();
+
+  if(plumedFile != NULL){
+
+    // CREATE PLUMED OBJECT
+    char **plumedArgs = new char*[7];
+    plumedArgs[1] = (char* )"plumed_zyx";
+    plumedArgs[2] = (char*)"plumed";
+    plumedArgs[3] = (char*)"plumedfile";
+    plumedArgs[4] = (char*) arg[7];
+    plumedArgs[5] = (char*)"outfile";
+    plumedArgs[6] = (char*) "cv.out";  /**/
+
+    createPlumedObject(7, plumedArgs);
+   
+  }
+  else{
+    error->all(FLERR,"MCCG Error: Error reading input. Please specify *correspondingMoleculesInput* in control file\n");
+  }  
+
+
+
+}
+
 void FixMCCG::readCouplingTable(char * file)
 {
 	printf("read %s\n", file);
@@ -883,6 +966,9 @@ void FixMCCG::readCouplingTable(char * file)
 		cv2_delta = (cv2_max - cv2_min) / double(cv2_num_points - 1);
 	
 	}
+  else{
+    error->one(FLERR,"Expecting 1 or 2 CVs");
+  }
 	
 	//while (())
 	printf("done reading coupling table\n");
