@@ -70,7 +70,6 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   charges(NULL)
 {
   printf("Hello world MCCG\n");
-  char 
   if (narg < 5) error->all(FLERR,"Illegal fix mccg command - fix name mccg controlFile outputFreq");
   
   sscanf(arg[4], "%d", &outputFreq);
