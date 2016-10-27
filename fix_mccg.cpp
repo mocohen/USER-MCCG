@@ -815,7 +815,7 @@ void FixMCCG::readControlFile(char * file)
   while ((read = getline(&line, &len, fp)) != -1) {
     char * inputArg = NULL;
     char * inputParam = NULL;
-    sscanf(line, "%s %s", &inputArg, &inputParam)
+    sscanf(line, "%s %s", &inputArg, &inputParam);
 
 
     if(strcmp(inputArg, "couplingTable") == 0){
@@ -878,7 +878,7 @@ void FixMCCG::readControlFile(char * file)
     plumedArgs[1] = (char* )"plumed_zyx";
     plumedArgs[2] = (char*)"plumed";
     plumedArgs[3] = (char*)"plumedfile";
-    plumedArgs[4] = (char*) arg[7];
+    plumedArgs[4] = (char*) plumedFile;
     plumedArgs[5] = (char*)"outfile";
     plumedArgs[6] = (char*) "cv.out";  /**/
 
