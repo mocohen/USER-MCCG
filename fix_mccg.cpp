@@ -793,8 +793,6 @@ void FixMCCG::readRealMols(char * file)
 
 void FixMCCG::readControlFile(char * file)
 {
-  printf("Read Control FIle\n");
-
 
   FILE * fp;
   char * line = NULL;
@@ -807,46 +805,39 @@ void FixMCCG::readControlFile(char * file)
     error->all(FLERR,"Error reading mccg input file\n");
   }
 
-  char * couplingTableFile = NULL;
-  char * correspondMolsFile = NULL;
-  char * plumedFile = NULL;
-  char * outFile = NULL;
+  char couplingTableFile[100];
+  char correspondMolsFile[100];
+  char plumedFile[100];
+  char outFile[100];
   numCVs = 0;
 
 
-  printf("Start reading file\n");
 
   while ((read = getline(&line, &len, fp)) != -1) {
-    char * inputArg = NULL;
-    char * inputParam = NULL;
-    sscanf(line, "%s %s", &inputArg, &inputParam);
-    printf("Read line %s, inputArg %s\n", line, inputArg);
+    char inputArg[100];
+    char inputParam[100];
+    int numArgs = sscanf(line, "%s %s", inputArg, &inputParam);
 
 
     if(strcmp(inputArg, "couplingTable") == 0) {
-      printf("Read couplingTable\n");
-      flush(stdout);
-      sscanf(inputParam, "%s", &couplingTableFile);
+
+      sscanf(inputParam, "%s", couplingTableFile);
 
     }
     else if(strcmp(inputArg, "numberCvs") == 0) {
-      printf("Read numberCvs\n");
-      sscanf(inputParam, "%d", &numCVs);
+      sscanf(inputParam, "%i", &numCVs);
 
     }
     else if(strcmp(inputArg, "correspondingMoleculesInput") == 0) {
-      printf("Read correspondingMoleculesInput\n");
-      sscanf(inputParam, "%s", &correspondMolsFile);
+      sscanf(inputParam, "%s", correspondMolsFile);
 
     }
     else if(strcmp(inputArg, "plumedInput") == 0) {
-      printf("Read plumedInput\n");
-      sscanf(inputParam, "%s", &plumedFile);
+      sscanf(inputParam, "%s", plumedFile);
 
     }    
     else if(strcmp(inputArg, "outputFile") == 0) {
-      printf("Read outputFile\n");
-      sscanf(inputParam, "%s", &outFile);
+      sscanf(inputParam, "%s", outFile);
 
     }
 
@@ -855,7 +846,7 @@ void FixMCCG::readControlFile(char * file)
   if (line) {
     free(line);
   }
-  if (numCVs != 1 || numCVs != 2) {
+  if (numCVs != 1 && numCVs != 2) {
     error->all(FLERR,"MCCG Error: Error reading input. numCVs should be 1 or 2\n");
   }
 
