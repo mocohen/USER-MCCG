@@ -92,6 +92,11 @@ class FixMCCG : public Fix {
   double *energy;
   int pairflag,bondflag,angleflag,dihedralflag,improperflag,kspaceflag;
   int nmax;
+
+  //Umbrella Sampling
+  double umbrellaForce1, umbrellaForce2, umbrellaCenter1, umbrellaCenter2;
+  int isUmbrellaSampling;
+
   
   
   

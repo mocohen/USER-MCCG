@@ -67,7 +67,8 @@ FixMCCG::FixMCCG(LAMMPS *lmp, int narg, char **arg) :
   nlocal(0),
   gatindex(NULL),
   masses(NULL),
-  charges(NULL)
+  charges(NULL),
+  isUmbrellaSampling(0)
 {
   setbuf(stdout, NULL);
   printf("Hello world MCCG\n");
@@ -340,6 +341,7 @@ void FixMCCG::post_force(int vflag)
 		
 		
 		v12 = table_v12[cv_index];
+    //mccg_output << "cv index " << cv_index << " v12 " << v12 << "\n";
 
     // Do not bother doing calculation if coupling is ~ zero
     if(fabs(v12) < 0.00001){
@@ -436,7 +438,7 @@ void FixMCCG::post_force(int vflag)
 
    			double term1, term2, term3;
    			 
-      	double dTot, dv12_1, dcvdq_1, dv12_2, dcvdq_2, dv12, dcvdq;
+      	double dTot, dcvdq_1, dcvdq_2, dv12, dcvdq;
       	if(numCVs == 1){
       		dcvdq = f_coupling[i][j];
       		dTot = dv12*dcvdq;
@@ -449,7 +451,29 @@ void FixMCCG::post_force(int vflag)
    			term1 = pow(c1, 2)*f[i][j];
    			term2 = pow(c2, 2)*f[corr_ind][j];
    			term3 = 2*c1*c2*dTot;
+
    			double totForce = term1 + term2 + (2*term3);
+
+        // char outString[200];
+        // sprintf(outString, "%8d %d %d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, i, j, dcvdq_1, dcvdq_2, dTot, f[i][j], f[corr_ind][j], term3, totForce);
+        // mccg_output << outString;
+        if(isUmbrellaSampling == 1){
+          if (numCVs == 1){
+            error->all(FLERR,"Cannot do 1 CV");
+          }
+          else if(numCVs == 2){
+
+            
+            double f1 = umbrellaForce1*(cv_array[0] - umbrellaCenter1)*dcvdq_1;
+            double f2 = umbrellaForce2*(cv_array[1] - umbrellaCenter2)*dcvdq_1;
+            double sumForce = f1 + f2 + totForce;
+            totForce += (f1 + f2);
+            // char outString[200];
+            
+            // sprintf(outString, "%8d %10.3f %10.3f %10.3f %10.3f\n", step, f1, f2, totForce, sumForce);
+            // mccg_output << outString;
+          }
+        }
 
    			f[i][j] = totForce;
    			f[corr_ind][j] = totForce;
@@ -810,6 +834,7 @@ void FixMCCG::readControlFile(char * file)
   char plumedFile[100];
   char outFile[100];
   numCVs = 0;
+  umbrellaForce1 = umbrellaForce2 = umbrellaCenter1 = umbrellaCenter2 = 0;
 
 
 
@@ -840,19 +865,47 @@ void FixMCCG::readControlFile(char * file)
       sscanf(inputParam, "%s", outFile);
 
     }
+    else if(strcmp(inputArg, "umbrellaSampling") == 0) {
+      if(strcmp(inputParam, "yes") == 0){
+        isUmbrellaSampling = 1;
+        printf("MCCG: Umbrella sampling is turned on\n Note: the 1/2 is not included in the force constant\n");
+      }
+      else{
+        printf("MCCG: Umbrella sampling is turned off. Specify \"umbrellaSampling yes\" to use umbrella sampling \n");
+      }
+    }
+    else if(strcmp(inputArg, "umbrellaForce1") == 0) {
+      sscanf(inputParam, "%lf", &umbrellaForce1);
+
+    }
+    else if(strcmp(inputArg, "umbrellaForce2") == 0) {
+      sscanf(inputParam, "%lf", &umbrellaForce2);
+
+    }
+        else if(strcmp(inputArg, "umbrellaCenter1") == 0) {
+      sscanf(inputParam, "%lf", &umbrellaCenter1);
+
+    }
+    else if(strcmp(inputArg, "umbrellaCenter2") == 0) {
+      sscanf(inputParam, "%lf", &umbrellaCenter2);
+
+    }
 
   }
   fclose(fp);
   if (line) {
     free(line);
   }
+  printf(" umb %d f1 %f f2 %f c1 %f c2 %f", isUmbrellaSampling, umbrellaForce1, umbrellaForce2, umbrellaCenter1, umbrellaCenter2);
   if (numCVs != 1 && numCVs != 2) {
     error->all(FLERR,"MCCG Error: Error reading input. numCVs should be 1 or 2\n");
   }
 
   if (outFile != NULL){
     mccg_output.open (outFile);
-    mccg_output << "#Timestep V11       V22        V12      Evec1      Evec2       Eval        CV1        CV2\n";
+    mccg_output << "#Timestep       V11        V22        V12      Evec1      Evec2       Eval        CV1        CV2\n";
+    //mccg_output << "#Timestep i j   dcvdq_1    dcvdq_2       dTot    f[i][j] f[corr][j]      term3   totForce\n";
+
   }
   else {
     error->all(FLERR,"MCCG Error: Error reading input. Please specify *outputFile* in control file\n");
