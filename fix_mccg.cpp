@@ -465,7 +465,7 @@ void FixMCCG::post_force(int vflag)
 
             
             double f1 = umbrellaForce1*(cv_array[0] - umbrellaCenter1)*dcvdq_1;
-            double f2 = umbrellaForce2*(cv_array[1] - umbrellaCenter2)*dcvdq_1;
+            double f2 = umbrellaForce2*(cv_array[1] - umbrellaCenter2)*dcvdq_2;
             double sumForce = f1 + f2 + totForce;
             totForce += (f1 + f2);
             // char outString[200];
