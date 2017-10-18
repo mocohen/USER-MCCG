@@ -44,6 +44,10 @@ class FixMCCG : public Fix {
   int get_CV_index(double cv1_val, double cv2_val);
   void readRealMols(char * file);
   double getEnergy(int molid);
+
+  //get rid of this
+  void end_of_step();
+
   std::ofstream mccg_output;
 //  double compute_vector(int);
 //  double memory_usage();

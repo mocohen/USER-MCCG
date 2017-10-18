@@ -155,6 +155,7 @@ int FixMCCG::setmask()
   int mask = 0;
   mask |= POST_FORCE;
   mask |= POST_INTEGRATE;
+  mask |= END_OF_STEP;
   //mask |= POST_FORCE_RESPA;
   //mask |= MIN_POST_FORCE;
   return mask;
@@ -207,19 +208,20 @@ void FixMCCG::post_integrate()
   {
 	  int molid = molecule[i];
 	  int atomTag = tag[i]; 
-	  //printf("atomTag %d \n", atomTag);
 	  f_coupling[i][0] = 0.0;
     f_coupling[i][1] = 0.0;
     f_coupling[i][2] = 0.0;
-    for (int j = 0; j < numlocal; j++)
-    {
-  		if(corresponding_atom_tags[atomTag - 1] == tag[j])
-  		{
-  			//offset positions slightly so that vdw don't produce nan
-  			x[j][0] = x[i][0] + 0.00001;
-  			x[j][1] = x[i][1] + 0.00001;
-  			x[j][2] = x[i][2] + 0.00001;
-  		} 
+    if (corresponding_atom_tags[tag[i]-1] != -1){
+      for (int j = 0; j < numlocal; j++)
+      {
+
+        if(corresponding_atom_tags[atomTag - 1] == tag[j])
+        { 
+          x[j][0] = x[i][0] + 0.00001;
+          x[j][1] = x[i][1] + 0.00001;
+          x[j][2] = x[i][2] + 0.00001;
+        } 
+        }
     }
   }
 }
@@ -327,7 +329,7 @@ void FixMCCG::post_force(int vflag)
 
     //Get PE for both states
 		v11 = getEnergy(real_mols[i]);
-		v22 = getEnergy(fake_mols[i])+deltaFs[i];
+		v22 = getEnergy(fake_mols[i]) + deltaFs[i];
 
 		if (numCVs == 1)
 		{
@@ -348,10 +350,12 @@ void FixMCCG::post_force(int vflag)
       if(v11 > v22){
 	      d1 = 0;
 	      d2 = 1;
+        e_value[i] = v22;
       }
       else{
         d1 = 1;
         d2 = 0;
+        e_value[i] = v11;
       }
     }
     else{
@@ -359,7 +363,9 @@ void FixMCCG::post_force(int vflag)
       double trace = v11+v22;
       double determ = (v11*v22) - (v12*v12);
       discrim = (pow(trace,2) / 4.0) - determ;
-      d1 = (trace / 2.0) - sqrt(discrim) - v22;
+
+      e_value[i] = (trace / 2.0 ) - sqrt(discrim);
+      d1 = e_value[i] - v22;
       d2 = v12;
 
     }
@@ -379,10 +385,7 @@ void FixMCCG::post_force(int vflag)
 		e_vector2[i] = c2;
 		
 		
-		double discr = pow(v12,2) + pow((v11 - v22)/2, 2 );
-		e_value[i] = 0.5 * (v11+v22) - sqrt(discr);
     potentialEnergy += e_value[i];
-		//printf("interation %d through mccg mols\nd1 %f d2 %f c1 %f c2 %f eval %f\n", i, d1, d2, c1, c2, e_value[i]);
     //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
     if(step%outputFreq == 0)
     {
@@ -393,12 +396,14 @@ void FixMCCG::post_force(int vflag)
       //mccg_output << step << "\t" << v11 << "\t" << v22 << "\t" << v12 <<  "\t" << c1 << "\t" << c2 << "\t" <<  e_value[i] << "\n";
     }
   }
+
+
   //calculate hellman-feyman forces for 2x2
-  for (int i = 0; i < nlocal; i++)
+  for (int atom_ind = 0; atom_ind < nlocal; atom_ind++)
   {
-    if ((mask[i] & groupbit) && (corresponding_atom_tags[tag[i]-1] != -1))
+    if ((mask[atom_ind] & groupbit) && (corresponding_atom_tags[tag[atom_ind]-1] != -1))
     {
-   		int molind = (molecule[i] - 1) / 2;
+   		int molind = (molecule[atom_ind] - 1) / 2;
 
    		int v12_ind;
    		double v11, v22, c1, c2;
@@ -416,7 +421,7 @@ void FixMCCG::post_force(int vflag)
   		int corr_ind;
   		for (int j = 0; j < nlocal; j++)
       {
-  			if(corresponding_atom_tags[tag[i] - 1] == tag[j])
+  			if(corresponding_atom_tags[tag[atom_ind] - 1] == tag[j])
   			{ 
   				corr_ind = j;
   			}
@@ -433,30 +438,30 @@ void FixMCCG::post_force(int vflag)
   		}
   		
    		// LOOP THROUGH X,Y,Z COORDINATES
-   		for (int j = 0; j < 3; j++)
+   		for (int dim = 0; dim < 3; dim++)
    		{
 
    			double term1, term2, term3;
    			 
       	double dTot, dcvdq_1, dcvdq_2, dv12, dcvdq;
       	if(numCVs == 1){
-      		dcvdq = f_coupling[i][j];
+      		dcvdq = f_coupling[atom_ind][dim];
       		dTot = dv12*dcvdq;
       	}
   			else if(numCVs == 2){
-  		   	dcvdq_1 = f_coupling[i][j];
-  		   	dcvdq_2 = f_coupling[corr_ind][j];
+  		   	dcvdq_1 = f_coupling[atom_ind][dim];
+  		   	dcvdq_2 = f_coupling[corr_ind][dim];
   		  	dTot = (dv12_1*dcvdq_1) + (dv12_2*dcvdq_2);
   			} 
-   			term1 = pow(c1, 2)*f[i][j];
-   			term2 = pow(c2, 2)*f[corr_ind][j];
+   			term1 = pow(c1, 2)*f[atom_ind][dim];
+   			term2 = pow(c2, 2)*f[corr_ind][dim];
    			term3 = 2*c1*c2*dTot;
 
-   			double totForce = term1 + term2 + (2*term3);
+   			double totForce = term1 + term2 + term3;
 
-        // char outString[200];
-        // sprintf(outString, "%8d %d %d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, i, j, dcvdq_1, dcvdq_2, dTot, f[i][j], f[corr_ind][j], term3, totForce);
-        // mccg_output << outString;
+        //char outString[200];
+        //sprintf(outString, "%8d %d %d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, i, j, dcvdq_1, dcvdq_2, dTot, f[i][j], f[corr_ind][j], term3, totForce, dv12_1, dv12_2);
+        //mccg_output << outString;
         if(isUmbrellaSampling == 1){
           if (numCVs == 1){
             error->all(FLERR,"Cannot do 1 CV");
@@ -468,15 +473,15 @@ void FixMCCG::post_force(int vflag)
             double f2 = umbrellaForce2*(cv_array[1] - umbrellaCenter2)*dcvdq_2;
             double sumForce = f1 + f2 + totForce;
             totForce += (f1 + f2);
-            // char outString[200];
+            char outString[200];
             
-            // sprintf(outString, "%8d %10.3f %10.3f %10.3f %10.3f\n", step, f1, f2, totForce, sumForce);
-            // mccg_output << outString;
+            sprintf(outString, "%8d %10.3f %10.3f %10.3f %10.3f\n", step, f1, f2, totForce, sumForce);
+            mccg_output << outString;
           }
         }
 
-   			f[i][j] = totForce;
-   			f[corr_ind][j] = totForce;
+   			f[atom_ind][dim] = totForce;
+   			f[corr_ind][dim] = totForce;
    		} 
 	  }
   }
@@ -655,46 +660,47 @@ void FixMCCG::compute_peratom()
 
 void FixMCCG::createPlumedObject(int narg, char **arg)
 {
+
   printf("create plumed object\n\n");
-// Not sure this is really necessary:
+  // Not sure this is really necessary:
   if (!atom->tag_enable) error->all(FLERR,"fix plumed requires atom tags");
-// Initialize plumed:
+  // Initialize plumed:
   plumed=new PLMD::Plumed;
   plumed->cmd("setMPIComm",&world);
 
-// Set up units
-// LAMMPS units wrt kj/mol - nm - ps
-// Set up units
+  // Set up units
+  // LAMMPS units wrt kj/mol - nm - ps
+  // Set up units
 
   if (force->boltz == 1.0){
-// LAMMPS units lj
+  // LAMMPS units lj
     plumed->cmd("setNaturalUnits");
   } else {
     double energyUnits=1.0;
     double lengthUnits=1.0;
     double timeUnits=1.0;
     if (force->boltz == 0.0019872067){
-// LAMMPS units real :: kcal/mol; angstrom; fs
+  // LAMMPS units real :: kcal/mol; angstrom; fs
       energyUnits=4.184;
       lengthUnits=0.1;
       timeUnits=0.001;
     } else if (force->boltz == 8.617343e-5){
-// LAMMPS units metal :: eV; angstrom; ps
+  // LAMMPS units metal :: eV; angstrom; ps
       energyUnits=96.48530749925792;
       lengthUnits=0.1;
       timeUnits=1.0;
     } else if (force->boltz == 1.3806504e-23){
-// LAMMPS units si :: Joule, m; s
+  // LAMMPS units si :: Joule, m; s
       energyUnits=0.001;
       lengthUnits=1.e-9;
       timeUnits=1.e-12;
     } else if (force->boltz == 1.3806504e-16){
-// LAMMPS units cgs :: erg; cms;, s
+  // LAMMPS units cgs :: erg; cms;, s
       energyUnits=6.0221418e13;
       lengthUnits=1.e-7;
       timeUnits=1.e-12;
     } else if (force->boltz == 3.16681534e-6){
-// LAMMPS units electron :: Hartree, bohr, fs
+  // LAMMPS units electron :: Hartree, bohr, fs
       energyUnits=2625.5257;
       lengthUnits=0.052917725;
       timeUnits=0.001;
@@ -705,7 +711,7 @@ void FixMCCG::createPlumedObject(int narg, char **arg)
     plumed->cmd("setMDTimeUnits",&timeUnits);
   }
 
-// Read fix parameters:
+  // Read fix parameters:
   int next=0;
   for(int i=3;i<narg;++i){
     if(!strcmp(arg[i],"outfile")) next=1;
@@ -733,7 +739,7 @@ void FixMCCG::createPlumedObject(int narg, char **arg)
 
   virial_flag=1;
 
-// This is the real initialization:
+  // This is the real initialization:
   plumed->cmd("init");
 
 }
@@ -812,6 +818,7 @@ void FixMCCG::readRealMols(char * file)
       }
     }
   }
+  printf("delF %f\n", deltaFs[0]);
 
 }
 
@@ -927,8 +934,7 @@ void FixMCCG::readControlFile(char * file)
   
   post_integrate();
 
-  if (plumedFile != NULL) {
-
+  if (plumedFile != NULL) { 
     // CREATE PLUMED OBJECT
     char **plumedArgs = new char*[7];
     plumedArgs[1] = (char* )"plumed_zyx";
@@ -1027,6 +1033,17 @@ void FixMCCG::readCouplingTable(char * file)
 	
 	//while (())
 	printf("done reading coupling table\n");
+
+}
+
+void FixMCCG::end_of_step()
+{
+  // double **f = atom->f;
+  // int numlocal = atom->nlocal;
+  // for (int atom_ind = 0; atom_ind < numlocal; atom_ind++)
+  // {
+  //   printf("end: atom i: %d fx: %f fy: %f fz: %f\n" , atom_ind, f[atom_ind][0], f[atom_ind][1], f[atom_ind][2]);
+  // }
 
 }
 
