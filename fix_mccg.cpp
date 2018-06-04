@@ -2,7 +2,7 @@
 Multi-Configurational Coarse-Graining Method 
 Voth Group
 http://vothgroup.uchicago.edu
-Morris Cohen (C) 2015
+Morris Cohen Sharp (C) 2015
 mocohen@uchicago.edu
 
 
@@ -138,14 +138,9 @@ FixMCCG::~FixMCCG()
   delete [] e_value;
   delete [] deltaFs;
   delete [] f_coupling;
-  //delete compute_pe_atom;
   delete [] energy;
   delete plumed;
-  //delete [] xstr;
-  //delete [] ystr;
-  //delete [] zstr;
-  //delete [] idregion;
-  //memory->destroy(sforce);
+
 }
 
 /* ---------------------------------------------------------------------- */
@@ -156,8 +151,7 @@ int FixMCCG::setmask()
   mask |= POST_FORCE;
   mask |= POST_INTEGRATE;
   mask |= END_OF_STEP;
-  //mask |= POST_FORCE_RESPA;
-  //mask |= MIN_POST_FORCE;
+
   return mask;
 }
 
@@ -166,9 +160,6 @@ int FixMCCG::setmask()
 void FixMCCG::init()
 {
   printf("init MCCG!\n");
-  //First calculate number of molecules
-
-  //modify->addstep_compute(update->ntimestep + 1);
 
 }
 
@@ -176,8 +167,7 @@ void FixMCCG::init()
 
 void FixMCCG::setup(int vflag)
 {
-  //printf("setup MCCG\n");
-  // WHAT DO I NEED TO DO HERE!!!!
+
   if (strstr(update->integrate_style,"verlet"))
     post_force(vflag);
 
@@ -246,7 +236,7 @@ void FixMCCG::post_force(int vflag)
   tagint *molecule = atom->molecule;
   tagint *tag = atom->tag;
 
-  //PLUMED STUFFS
+  //PLUMED Initializations
   /*---------------------------------------------------------------------*/
   int update_gatindex = 0 ;
   if(nlocal!=atom->nlocal){
@@ -343,7 +333,6 @@ void FixMCCG::post_force(int vflag)
 		
 		
 		v12 = table_v12[cv_index];
-    //mccg_output << "cv index " << cv_index << " v12 " << v12 << "\n";
 
     // Do not bother doing calculation if coupling is ~ zero
     if(fabs(v12) < 0.00001){
@@ -386,14 +375,12 @@ void FixMCCG::post_force(int vflag)
 		
 		
     potentialEnergy += e_value[i];
-    //mccg_output << "Timestep V11 V22 V12 Evec1 Evec2 Eval CV1 CV2 ";
     if(step%outputFreq == 0)
     {
       char outString[150];
       sprintf(outString, "%8d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, v11, v22, v12, c1, c2, e_value[i], cv_array[0], cv_array[1]);
       mccg_output << outString;
       mccg_output.flush();
-      //mccg_output << step << "\t" << v11 << "\t" << v22 << "\t" << v12 <<  "\t" << c1 << "\t" << c2 << "\t" <<  e_value[i] << "\n";
     }
   }
 
@@ -459,9 +446,6 @@ void FixMCCG::post_force(int vflag)
 
    			double totForce = term1 + term2 + term3;
 
-        //char outString[200];
-        //sprintf(outString, "%8d %d %d %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f %10.3f\n", step, i, j, dcvdq_1, dcvdq_2, dTot, f[i][j], f[corr_ind][j], term3, totForce, dv12_1, dv12_2);
-        //mccg_output << outString;
         if(isUmbrellaSampling == 1){
           if (numCVs == 1){
             error->all(FLERR,"Cannot do 1 CV");
@@ -559,22 +543,9 @@ double FixMCCG::getEnergy(int molid)
 
 void FixMCCG::compute_peratom()
 {
-  //printf("Compute per atom \n");
   int i;
 
-  /*invoked_peratom = update->ntimestep;
-  if (update->eflag_atom != invoked_peratom)
-    error->all(FLERR,"Per-atom energy was not tallied on needed timestep");
 
-  // grow local energy array if necessary
-  // needs to be atom->nmax in length
-
-  if (atom->nmax > nmax) {
-    memory->destroy(energy);
-    nmax = atom->nmax;
-    memory->create(energy,nmax,"pe/atom:energy");
-    vector_atom = energy;
-  }
 
   // npair includes ghosts if either newton flag is set
   //   b/c some bonds/dihedrals call pair::ev_tally with pairwise info
@@ -605,32 +576,22 @@ void FixMCCG::compute_peratom()
   
   if (pairflag && force->pair) {
     double *eatom = force->pair->eatom;
-    //printf("in if statement\n");
-    //fflush(stdout);
-    //printf("energy %f\n", energy[0]);
-    //fflush(stdout);
-    //printf("eatom %f\n", eatom[0]);
-    //fflush(stdout);
+
     for (i = 0; i < npair; i++) energy[i] += eatom[i];
   }
   
-  //printf("pair energy\n");
   if (bondflag && force->bond) {
     double *eatom = force->bond->eatom;
-    //printf("eatom %f", eatom[0]);
     for (i = 0; i < nbond; i++) energy[i] += eatom[i];
   }
-  //printf("pair bond\n");
   if (angleflag && force->angle) {
     double *eatom = force->angle->eatom;
     for (i = 0; i < nbond; i++) energy[i] += eatom[i];
   }
-  //printf("pair angle\n");
   if (dihedralflag && force->dihedral) {
     double *eatom = force->dihedral->eatom;
     for (i = 0; i < nbond; i++) energy[i] += eatom[i];
   }
-  //printf("pair dihedral\n");
   if (improperflag && force->improper) {
     double *eatom = force->improper->eatom;
     for (i = 0; i < nbond; i++) energy[i] += eatom[i];
@@ -653,7 +614,6 @@ void FixMCCG::compute_peratom()
 
   for (i = 0; i < numlocal; i++)
     if (!(mask[i] & groupbit)) energy[i] = 0.0;
-  //printf("Done compute");
 }
 
 /* ---------------------------------------------------------------------- */
@@ -785,10 +745,7 @@ void FixMCCG::readRealMols(char * file)
   {
   	printf("loop");
    	fgets(line,MAXLINE,fnp);
-   	//fake_mols[i] = 2;
-   	//real_mols[i] = 1;
-   	//num_mccg_atoms = 1;
-   	//int mccg_atoms;
+
   	sscanf(line,"MOL %d %d %d %lg", &real_mols[i], &fake_mols[i], &num_mccg_atoms[i], &deltaFs[i]);
   	for (int j=0; j< num_mccg_atoms[i]; j++)
   	{
@@ -797,8 +754,7 @@ void FixMCCG::readRealMols(char * file)
   		sscanf(line,"%d %d", &a, &b);
   		//only need to add corr atoms once to prevent double evaluation.
   		if (b > a) corresponding_atom_tags[a-1] = b;
-  		//corresponding_atom_tags[a-1] = b;
-  		//corresponding_atom_tags[b-1] = a;
+
   	}
   }
   printf("done read\n print ids\n");
@@ -911,7 +867,6 @@ void FixMCCG::readControlFile(char * file)
   if (outFile != NULL){
     mccg_output.open (outFile);
     mccg_output << "#Timestep       V11        V22        V12      Evec1      Evec2       Eval        CV1        CV2\n";
-    //mccg_output << "#Timestep i j   dcvdq_1    dcvdq_2       dTot    f[i][j] f[corr][j]      term3   totForce\n";
 
   }
   else {
@@ -969,7 +924,6 @@ void FixMCCG::readCouplingTable(char * file)
 	int num_q;
 	fgets(line,MAXLINE,fp);
 	sscanf(line,"N %i NCV %i",&table_num_points,&num_q);
-	//printf("NumCVs %d num_q %d", numCVs, num_q);
 	if(numCVs != num_q) error->one(FLERR,"Inconsistent number of CVs.");
 	printf("numCVs %d \n", numCVs);
 	if (numCVs == 1)
@@ -1048,28 +1002,3 @@ void FixMCCG::end_of_step()
 }
 
 
-/* ----------------------------------------------------------------------
-   return components of total force on fix group before force was changed
-------------------------------------------------------------------------- */
-
-/*double FixSetForce::compute_vector(int n)
-{
-  // only sum across procs one time
-
-  if (force_flag == 0) {
-    MPI_Allreduce(foriginal,foriginal_all,3,MPI_DOUBLE,MPI_SUM,world);
-    force_flag = 1;
-  }
-  return foriginal_all[n];
-}*/
-
-/* ----------------------------------------------------------------------
-   memory usage of local atom-based array
-------------------------------------------------------------------------- */
-
-/*double FixSetForce::memory_usage()
-{
-  double bytes = 0.0;
-  if (varflag == ATOM) bytes = atom->nmax*3 * sizeof(double);
-  return bytes;
-}*/
